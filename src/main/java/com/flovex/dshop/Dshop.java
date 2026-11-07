@@ -98,8 +98,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private double price(String cat,String id){return prices.getDouble(cat+"."+id,0);}
     private String formatPrice(double amount){
-        if(getConfig().getBoolean("price-format.enabled",true)){String[] suffix={"","k","m","b","t","q","qq"};int i=0;double n=amount;while(n>=1000&&i<suffix.length-1){n/=1000;i++;}return new DecimalFormat("0.##").format(n)+suffix[i];}
-        return new DecimalFormat(getConfig().getString("currency.format","#,##0.##")).format(amount);
+        String symbol=getConfig().getString("currency.symbol","$");
+        if(getConfig().getBoolean("price-format.enabled",true)){String[] suffix={"","k","m","b","t","q","qq"};int i=0;double n=amount;while(n>=1000&&i<suffix.length-1){n/=1000;i++;}return symbol+new DecimalFormat("0.##").format(n)+suffix[i];}
+        return symbol+new DecimalFormat(getConfig().getString("currency.format","#,##0.##")).format(amount);
     }
     private void openPurchase(Player p,String cat,int page,String id){
         YamlConfiguration c=categories.get(cat);ItemStack stack=c.getItemStack("pages."+page+".items."+id+".item");if(stack==null)return;
@@ -108,16 +109,18 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
-        Inventory inv=Bukkit.createInventory(p,27,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
-        inv.setItem(13,b.item.clone());
+        Inventory inv=Bukkit.createInventory(p,36,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
+        inv.setItem(4,b.item.clone());
         inv.setItem(9,tagged(Material.RED_CANDLE,"&cRemove 1",List.of("&7Remove one item"),"minus1",b.cat,b.page,b.id));
         inv.setItem(10,tagged(Material.RED_CANDLE,"&cRemove 10",List.of("&7Remove ten items"),"minus10",b.cat,b.page,b.id));
         inv.setItem(11,tagged(Material.RED_CANDLE,"&cRemove 64",List.of("&7Remove sixty-four items"),"minus64",b.cat,b.page,b.id));
         inv.setItem(12,tagged(Material.RED_STAINED_GLASS_PANE,"&cCancel",List.of("&7Cancel this purchase"),"cancel",b.cat,b.page,b.id));
+        inv.setItem(18,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Return to page "+Math.max(1,b.page-1)),"previous",b.cat,b.page,null));
         inv.setItem(14,tagged(Material.LIME_CANDLE,"&aAdd 1",List.of("&7Add one item"),"plus1",b.cat,b.page,b.id));
         inv.setItem(15,tagged(Material.LIME_CANDLE,"&aAdd 10",List.of("&7Add ten items"),"plus10",b.cat,b.page,b.id));
         inv.setItem(16,tagged(Material.LIME_CANDLE,"&aAdd 64",List.of("&7Add sixty-four items"),"plus64",b.cat,b.page,b.id));
-        inv.setItem(22,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount)),"confirm",b.cat,b.page,b.id));
+        inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(b.page+1)),"next",b.cat,b.page,null));
+        inv.setItem(31,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount)),"confirm",b.cat,b.page,b.id));
         p.openInventory(inv);
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
@@ -126,7 +129,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(!p.hasPermission("dshop.admin")){msg(p,"&cYou don't have permission.");return true;}
         switch(a[0].toLowerCase(Locale.ROOT)){
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
-            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.economy","VAULT");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
+            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
             case "add","remove","price" -> {if(a.length<3){msg(p,"&c/shop "+a[0]+" <category> <page>");return true;}String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}int page;try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}if(a[0].equalsIgnoreCase("add")){ItemStack hand=p.getInventory().getItemInMainHand();if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}sessions.put(p.getUniqueId(),new EditSession("add",cat,page,hand.clone()));msg(p,"&eClick an empty slot in the category page to place the item.");}else if(a[0].equalsIgnoreCase("remove")){sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));msg(p,"&eClick the item you want to remove.");}else{sessions.put(p.getUniqueId(),new EditSession("price",cat,page));msg(p,"&eClick the item, then type its price in chat. Type cancel to stop.");}p.closeInventory();openPage(p,cat,page);return true;}
             default -> msg(p,"&cUnknown command.");
@@ -140,8 +143,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String action=clicked!=null&&clicked.hasItemMeta()?clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING):null;
         EditSession edit=sessions.get(p.getUniqueId());
         if(edit!=null && (edit.type.equals("category")||edit.type.equals("add")||edit.type.equals("remove")||edit.type.equals("price"))){
+            e.setCancelled(true);
             if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory())return;
-            e.setCancelled(true);int slot=e.getSlot();
+            int slot=e.getSlot();
             if(edit.type.equals("category")){YamlConfiguration c=categories.get(edit.cat);c.set("category.slot",slot);saveCategory(edit.cat);sessions.remove(p.getUniqueId());p.closeInventory();msg(p,"&aCategory slot saved.");return;}
             YamlConfiguration c=categories.get(edit.cat);String base="pages."+edit.page+".items.";
             if(edit.type.equals("add")){if(clicked!=null&&clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);c.set(base+id+".item",edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
@@ -161,6 +165,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
             case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(2304,b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
+            case "previous" -> {purchases.remove(p.getUniqueId());openPage(p,cat,Math.max(1,page-1));}
+            case "next" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page+1);}
             case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()*36){msg(p,"&cThat quantity is too large.");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total));openPage(p,b.cat,b.page);}
         }
     }
