@@ -49,7 +49,13 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         File[] files=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".yml")); if(files==null)return;
         Arrays.sort(files); for(File f:files)categories.put(f.getName().substring(0,f.getName().length()-4).toLowerCase(Locale.ROOT),YamlConfiguration.loadConfiguration(f));
     }
-    private String color(String s){return ChatColor.translateAlternateColorCodes('&',s==null?"":s.replaceAll("&#([A-Fa-f0-9]{6})","§x§$1")); }
+    private String color(String s){
+        if(s==null)return "";
+        java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("&#([A-Fa-f0-9]{6})").matcher(s);
+        StringBuffer out=new StringBuffer();
+        while(matcher.find()){String hex=matcher.group(1);StringBuilder legacy=new StringBuilder("§x");for(char ch:hex.toCharArray())legacy.append('§').append(ch);matcher.appendReplacement(out,java.util.regex.Matcher.quoteReplacement(legacy.toString()));}
+        matcher.appendTail(out);return ChatColor.translateAlternateColorCodes('&',out.toString());
+    }
     private void msg(Player p,String s){p.sendMessage(color(getConfig().getString("messages.prefix","&8[&bDshop&8] ")+s));}
     private ItemStack tagged(Material m,String name,List<String> lore,String action,String cat,int page,String item){
         ItemStack it=new ItemStack(m); ItemMeta meta=it.getItemMeta();meta.setDisplayName(color(name));
@@ -120,7 +126,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(!p.hasPermission("dshop.admin")){msg(p,"&cYou don't have permission.");return true;}
         switch(a[0].toLowerCase(Locale.ROOT)){
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
-            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.economy","VAULT");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
+            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.economy","VAULT");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
             case "add","remove","price" -> {if(a.length<3){msg(p,"&c/shop "+a[0]+" <category> <page>");return true;}String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}int page;try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}if(a[0].equalsIgnoreCase("add")){ItemStack hand=p.getInventory().getItemInMainHand();if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}sessions.put(p.getUniqueId(),new EditSession("add",cat,page,hand.clone()));msg(p,"&eClick an empty slot in the category page to place the item.");}else if(a[0].equalsIgnoreCase("remove")){sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));msg(p,"&eClick the item you want to remove.");}else{sessions.put(p.getUniqueId(),new EditSession("price",cat,page));msg(p,"&eClick the item, then type its price in chat. Type cancel to stop.");}p.closeInventory();openPage(p,cat,page);return true;}
             default -> msg(p,"&cUnknown command.");
@@ -130,15 +136,15 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private void savePrices(){try{prices.save(pricesFile);}catch(Exception e){getLogger().warning(e.getMessage());}}
     @EventHandler public void onClick(InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player p))return;
-        ItemStack clicked=e.getCurrentItem();if(clicked==null||!clicked.hasItemMeta())return;
-        String action=clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING);
+        ItemStack clicked=e.getCurrentItem();
+        String action=clicked!=null&&clicked.hasItemMeta()?clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING):null;
         EditSession edit=sessions.get(p.getUniqueId());
         if(edit!=null && (edit.type.equals("category")||edit.type.equals("add")||edit.type.equals("remove")||edit.type.equals("price"))){
             if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory())return;
             e.setCancelled(true);int slot=e.getSlot();
             if(edit.type.equals("category")){YamlConfiguration c=categories.get(edit.cat);c.set("category.slot",slot);saveCategory(edit.cat);sessions.remove(p.getUniqueId());p.closeInventory();msg(p,"&aCategory slot saved.");return;}
             YamlConfiguration c=categories.get(edit.cat);String base="pages."+edit.page+".items.";
-            if(edit.type.equals("add")){if(clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);c.set(base+id+".item",edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
+            if(edit.type.equals("add")){if(clicked!=null&&clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);c.set(base+id+".item",edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
             String id=null;ConfigurationSection sec=c.getConfigurationSection(base);if(sec!=null)for(String k:sec.getKeys(false))if(sec.getInt(k+".slot",-1)==slot){id=k;break;}
             if(id==null){msg(p,"&cNo shop item in that slot.");return;}
             if(edit.type.equals("remove")){c.set(base+id,null);prices.set(edit.cat+"."+id,null);saveCategory(edit.cat);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aItem removed.");openPage(p,edit.cat,edit.page);}
@@ -176,7 +182,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         Bukkit.getScheduler().runTask(this,()->{Player p=e.getPlayer();if(input.equalsIgnoreCase("cancel")){sessions.remove(p.getUniqueId());msg(p,"&cPrice editing cancelled.");return;}double amount=parseAmount(input);if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}prices.set(s.cat+"."+s.itemId,amount);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aPrice saved: &f"+formatPrice(amount));openPage(p,s.cat,s.page);});
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
-    @Override public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
     @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("create","delete","add","remove","price","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
     private static final class Purchase{final String cat,id;final int page;final ItemStack item;final double unit;int amount;Purchase(String c,int p,String i,ItemStack it,double u,int a){cat=c;page=p;id=i;item=it;unit=u;amount=a;}}
     private static final class EditSession{final String type,cat;final int page;final ItemStack item;String itemId;EditSession(String t,String c,int p){this(t,c,p,null);}EditSession(String t,String c,int p,ItemStack i){type=t;cat=c;page=p;item=i;}}
