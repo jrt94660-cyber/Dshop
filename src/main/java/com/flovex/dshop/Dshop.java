@@ -103,8 +103,14 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String currency=data==null?"":data.getString("category.currency","");
         String symbol=getConfig().getString("currency.symbols."+provider+"."+currency,
                 getConfig().getString("currency.symbols."+provider,getConfig().getString("currency.symbol","$")));
-        if(getConfig().getBoolean("price-format.enabled",true)){String[] suffix={"","k","m","b","t","q","qq"};int i=0;double n=amount;while(n>=1000&&i<suffix.length-1){n/=1000;i++;}return symbol+new DecimalFormat("0.##").format(n)+suffix[i];}
-        return symbol+new DecimalFormat(getConfig().getString("price-format.decimal-pattern","#,##0.##")).format(amount);
+        if(getConfig().getBoolean("price-format.enabled",true)){
+            List<String> suffixes=getConfig().getStringList("price-format.suffixes");
+            if(suffixes.isEmpty())suffixes=List.of("k","m","b","t","q","qq");
+            int i=0;double n=amount;while(n>=1000&&i<suffixes.size()){n/=1000;i++;}
+            String suffix=i==0?"":suffixes.get(i-1);
+            return symbol+new DecimalFormat(getConfig().getString("price-format.decimal-pattern","0.##")).format(n)+suffix;
+        }
+        return symbol+new DecimalFormat(getConfig().getString("currency.format","#,##0.##")).format(amount);
     }
     private void openPurchase(Player p,String cat,int page,String id){
         YamlConfiguration c=categories.get(cat);ItemStack stack=c.getItemStack("pages."+page+".items."+id+".item");if(stack==null)return;
