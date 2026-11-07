@@ -16,7 +16,7 @@ Admin commands require `dshop.admin`. Opening the shop requires no special permi
 
 ## Files
 
-- `plugins/Dshop/config.yml` - Global currency symbols and number/price formatting, plus GUI titles.
+- `plugins/Dshop/config.yml` - Global currency symbols and price formatting only.
 - `plugins/Dshop/prices.yml` - Prices indexed by category and item ID.
 - `plugins/Dshop/categories/<category>.yml` - Category display settings, economy provider, currency ID, pages and product item stacks.
 
