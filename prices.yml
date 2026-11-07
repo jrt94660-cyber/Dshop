@@ -1,0 +1,6 @@
+# Item prices are stored by category and item ID.
+# Example:
+# gear:
+#   a1b2c3d4: 2500000.0
+#
+# Edit prices in-game with /shop price <category> <page>.
