@@ -171,17 +171,36 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         }
     }
     private boolean withdraw(Player p,String cat,double amount){
-        String provider=categories.get(cat).getString("category.economy","VAULT").toUpperCase(Locale.ROOT);
-        if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
-        // Non-Vault providers are resolved reflectively to avoid hard compile-time dependencies.
-        try{
-            if(provider.equals("COINSENGINE"))return reflectiveEconomy("su.nightexpress.coinsengine.api.CoinsEngineAPI",p,amount,categories.get(cat).getString("category.currency","shards"));
-            if(provider.equals("EXCELENTECONOMY"))return reflectiveEconomy("com.excellentcrash.excellenteconomy.api.EconomyAPI",p,amount,categories.get(cat).getString("category.currency","default"));
-        }catch(Exception ignored){}
+        YamlConfiguration category=categories.get(cat);
+        String provider=category.getString("category.economy","VAULT").toUpperCase(Locale.ROOT);
+        String currency=category.getString("category.currency","shards");
+        try {
+            if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
+            if(provider.equals("COINSENGINE")){
+                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")==null)return false;
+                Class<?> api=Class.forName("su.nightexpress.coinsengine.api.CoinsEngineAPI");
+                Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
+                if(currencyObject==null)return false;
+                for(var method:api.getMethods())if(method.getName().equals("removeBalance")&&method.getParameterCount()==3){
+                    Object result=method.invoke(null,p,currencyObject,amount);
+                    return result instanceof Boolean b&&b;
+                }
+                return false;
+            }
+            if(provider.equals("EXCELENTECONOMY")||provider.equals("EXCELLENTEconomy".toUpperCase(Locale.ROOT))){
+                Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
+                Object registration=Bukkit.getServicesManager().getRegistration(api);
+                if(registration==null)return false;
+                Object instance=registration.getClass().getMethod("getProvider").invoke(registration);
+                for(var method:api.getMethods())if(method.getName().equals("withdraw")&&method.getParameterCount()==3){
+                    Object result=method.invoke(instance,p,currency,amount);
+                    return result instanceof Boolean b&&b;
+                }
+            }
+        } catch(Exception ex) {
+            getLogger().warning("Economy withdrawal failed for "+provider+": "+ex.getClass().getSimpleName()+" - "+ex.getMessage());
+        }
         return false;
-    }
-    private boolean reflectiveEconomy(String className,Player p,double amount,String currency)throws Exception{
-        Class<?> api=Class.forName(className);for(var m:api.getMethods())if((m.getName().equalsIgnoreCase("removeMoney")||m.getName().equalsIgnoreCase("withdraw"))&&m.getParameterCount()>=2){Object[] args=new Object[m.getParameterCount()];Class<?>[] types=m.getParameterTypes();for(int i=0;i<args.length;i++){if(types[i].isAssignableFrom(Player.class))args[i]=p;else if(types[i]==double.class||types[i]==Double.class)args[i]=amount;else if(types[i]==String.class)args[i]=currency;else args[i]=null;}Object result=m.invoke(null,args);return !(result instanceof Boolean b)||b;}return false;
     }
     @EventHandler public void onChat(AsyncPlayerChatEvent e){
         EditSession s=sessions.get(e.getPlayer().getUniqueId());if(s==null||!s.type.equals("price"))return;e.setCancelled(true);String input=e.getMessage().trim();
