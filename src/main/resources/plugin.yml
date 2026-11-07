@@ -1,0 +1,14 @@
+name: Dshop
+version: 1.0.0
+main: com.flovex.dshop.Dshop
+api-version: '1.21'
+softdepend: [Vault, CoinsEngine, ExcellentEconomy]
+commands:
+  shop:
+    description: Opens and manages Dshop
+    usage: /shop
+permissions:
+  dshop.admin:
+    default: op
+  dshop.use:
+    default: true
