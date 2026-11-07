@@ -74,7 +74,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             String display=c.getString("category.display-name","&b"+en.getKey().toUpperCase(Locale.ROOT));
             String desc=c.getString("category.description","Browse this category.");
             Material mat=Material.matchMaterial(c.getString("category.material","CHEST"));if(mat==null)mat=Material.CHEST;
-            inv.setItem(slot,tagged(mat,display,List.of("&7Description","", "&bInformation:","&bClick here to view","&f"+desc,"","&e▸ &lCLICK &eto Open"),"category",en.getKey(),1,null));
+            inv.setItem(slot,tagged(mat,display,List.of("&7Description","", "&bInformation:","&bClick here to view","&f"+desc,"","&e▸ &lCLICK &eto Open"),"category",en.getKey(),c.getInt("category.default-page",1),null));
         }
         p.openInventory(inv);
     }
@@ -139,7 +139,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(!p.hasPermission("dshop.admin")){msg(p,"&cYou don't have permission.");return true;}
         switch(a[0].toLowerCase(Locale.ROOT)){
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
-            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
+            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",Integer.parseInt(a[2]));y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
             case "add","remove","price" -> {if(a.length<3){msg(p,"&c/shop "+a[0]+" <category> <page>");return true;}String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}int page;try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}if(a[0].equalsIgnoreCase("add")){ItemStack hand=p.getInventory().getItemInMainHand();if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}sessions.put(p.getUniqueId(),new EditSession("add",cat,page,singleItem(hand)));msg(p,"&eClick an empty slot in the category page to place the item.");}else if(a[0].equalsIgnoreCase("remove")){sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));msg(p,"&eClick the item you want to remove.");}else{sessions.put(p.getUniqueId(),new EditSession("price",cat,page));msg(p,"&eClick the item, then type its price in chat. Type cancel to stop.");}p.closeInventory();openPage(p,cat,page);return true;}
             default -> msg(p,"&cUnknown command.");
@@ -170,7 +170,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String cat=clicked.getItemMeta().getPersistentDataContainer().get(categoryKey,PersistentDataType.STRING);
         int page=clicked.getItemMeta().getPersistentDataContainer().getOrDefault(pageKey,PersistentDataType.INTEGER,1);
         switch(action){
-            case "category" -> openPage(p,cat,1);
+            case "category" -> openPage(p,cat,page);
             case "previous" -> openPage(p,cat,Math.max(1,page-1));
             case "next" -> openPage(p,cat,page+1);
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
