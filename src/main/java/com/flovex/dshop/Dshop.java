@@ -88,7 +88,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             ItemStack stack=section.getItemStack(key+".item");if(stack==null)continue;
             ItemStack shown=stack.clone();ItemMeta meta=shown.getItemMeta();
             List<String> lore=meta.hasLore()?new ArrayList<>(meta.getLore()):new ArrayList<>();
-            lore.add("");lore.add(color("&7Price: &a"+formatPrice(price(cat,key))));
+            lore.add("");lore.add(color("&7Price: &a"+formatPrice(price(cat,key),cat)));
             lore.add(color("&e▸ &lCLICK &eto Purchase"));meta.setLore(lore);shown.setItemMeta(meta);
             inv.setItem(slot,tagged(shown.getType(),meta.hasDisplayName()?meta.getDisplayName():shown.getType().name(),lore,"product",cat,page,key));
         }
@@ -97,10 +97,14 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         p.openInventory(inv);
     }
     private double price(String cat,String id){return prices.getDouble(cat+"."+id,0);}
-    private String formatPrice(double amount){
-        String symbol=getConfig().getString("currency.symbol","$");
+    private String formatPrice(double amount,String category){
+        YamlConfiguration data=categories.get(category);
+        String provider=data==null?"VAULT":data.getString("category.economy","VAULT").toUpperCase(Locale.ROOT);
+        String currency=data==null?"":data.getString("category.currency","");
+        String symbol=getConfig().getString("currency.symbols."+provider+"."+currency,
+                getConfig().getString("currency.symbols."+provider,getConfig().getString("currency.symbol","$")));
         if(getConfig().getBoolean("price-format.enabled",true)){String[] suffix={"","k","m","b","t","q","qq"};int i=0;double n=amount;while(n>=1000&&i<suffix.length-1){n/=1000;i++;}return symbol+new DecimalFormat("0.##").format(n)+suffix[i];}
-        return symbol+new DecimalFormat(getConfig().getString("currency.format","#,##0.##")).format(amount);
+        return symbol+new DecimalFormat(getConfig().getString("price-format.decimal-pattern","#,##0.##")).format(amount);
     }
     private void openPurchase(Player p,String cat,int page,String id){
         YamlConfiguration c=categories.get(cat);ItemStack stack=c.getItemStack("pages."+page+".items."+id+".item");if(stack==null)return;
@@ -120,7 +124,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         inv.setItem(15,tagged(Material.LIME_CANDLE,"&aAdd 10",List.of("&7Add ten items"),"plus10",b.cat,b.page,b.id));
         inv.setItem(16,tagged(Material.LIME_CANDLE,"&aAdd 64",List.of("&7Add sixty-four items"),"plus64",b.cat,b.page,b.id));
         inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(b.page+1)),"next",b.cat,b.page,null));
-        inv.setItem(31,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount)),"confirm",b.cat,b.page,b.id));
+        inv.setItem(31,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
         p.openInventory(inv);
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
@@ -167,7 +171,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
             case "previous" -> {purchases.remove(p.getUniqueId());openPage(p,cat,Math.max(1,page-1));}
             case "next" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page+1);}
-            case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()*36){msg(p,"&cThat quantity is too large.");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total));openPage(p,b.cat,b.page);}
+            case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()*36){msg(p,"&cThat quantity is too large.");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);}
         }
     }
     private boolean withdraw(Player p,String cat,double amount){
