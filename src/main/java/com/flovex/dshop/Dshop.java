@@ -193,8 +193,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
                 if(currencyObject==null)return false;
                 for(var method:api.getMethods())if(method.getName().equals("removeBalance")&&method.getParameterCount()==3){
-                    Object result=method.invoke(null,p,currencyObject,amount);
-                    return result instanceof Boolean b&&b;
+                    Class<?>[] types=method.getParameterTypes();
+                    if(types[0].isAssignableFrom(p.getClass())&&types[1].isInstance(currencyObject)&&(types[2]==double.class||types[2]==Double.class)){
+                        Object result=method.invoke(null,p,currencyObject,amount);
+                        return result instanceof Boolean b&&b;
+                    }
                 }
                 return false;
             }
