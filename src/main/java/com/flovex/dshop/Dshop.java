@@ -176,8 +176,6 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
             case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(2304,b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
-            case "previous" -> {purchases.remove(p.getUniqueId());openPage(p,cat,Math.max(1,page-1));}
-            case "next" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page+1);}
             case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()*36){msg(p,"&cThat quantity is too large.");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);}
         }
     }
