@@ -1,16 +1,23 @@
+# Global currency symbols and number formatting only.
 currency:
   symbol: "$"
+  symbols:
+    VAULT: "$"
+    COINSENGINE:
+      shards: "✦"
+      default: "✦"
+    EXCELENTECONOMY:
+      shards: "✦"
+      default: "✦"
   format: "#,##0.##"
+
 price-format:
   enabled: true
-  suffixes: [k, m, b, t, q, qq]
-gui:
-  categories-title: "&8Shop | Categories"
-  category-rows: 4
-  page-title: "&8{category} | Page {page}"
-  page-rows: 6
-  purchase-title: "&8Confirm Purchase"
-messages:
-  prefix: "&8[&bDshop&8] "
-  no-permission: "&cYou don't have permission."
-  invalid-price: "&cPlease enter a valid positive price."
+  decimal-pattern: "#,##0.##"
+  suffixes:
+    - "k"
+    - "m"
+    - "b"
+    - "t"
+    - "q"
+    - "qq"
