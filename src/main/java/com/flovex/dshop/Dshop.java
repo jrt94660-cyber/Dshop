@@ -67,7 +67,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         it.setItemMeta(meta);return it;
     }
     private void openCategories(Player p){
-        int rows=Math.max(1,Math.min(6,getConfig().getInt("gui.category-rows",4)));
+        int rows=3;
         Inventory inv=Bukkit.createInventory(p,rows*9,color(getConfig().getString("gui.categories-title","&8Shop | Categories")));
         for(var en:categories.entrySet()){
             YamlConfiguration c=en.getValue(); int slot=c.getInt("category.slot",-1); if(slot<0||slot>=inv.getSize())continue;
@@ -80,17 +80,28 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private void openPage(Player p,String cat,int page){
         YamlConfiguration c=categories.get(cat);if(c==null){msg(p,"&cCategory not found.");return;}
-        int rows=Math.max(1,Math.min(6,c.getInt("category.page-rows",getConfig().getInt("gui.page-rows",6))));
+        int rows=3;
         Inventory inv=Bukkit.createInventory(p,rows*9,color(getConfig().getString("gui.page-title","&8{category} | Page {page}").replace("{category}",c.getString("category.name",cat)).replace("{page}",String.valueOf(page))));
         ConfigurationSection section=c.getConfigurationSection("pages."+page+".items");
         if(section!=null)for(String key:section.getKeys(false)){
             int slot=section.getInt(key+".slot",-1);if(slot<0||slot>=inv.getSize())continue;
             ItemStack stack=section.getItemStack(key+".item");if(stack==null)continue;
             ItemStack shown=stack.clone();ItemMeta meta=shown.getItemMeta();
-            List<String> lore=meta.hasLore()?new ArrayList<>(meta.getLore()):new ArrayList<>();
-            lore.add("");lore.add(color("&7Price: &a"+formatPrice(price(cat,key),cat)));
-            lore.add(color("&e▸ &lCLICK &eto Purchase"));meta.setLore(lore);shown.setItemMeta(meta);
-            inv.setItem(slot,tagged(shown.getType(),meta.hasDisplayName()?meta.getDisplayName():shown.getType().name(),lore,"product",cat,page,key));
+            List<String> lore=new ArrayList<>();
+            lore.add(color("&7Description"));
+            if(meta.hasLore())lore.addAll(meta.getLore());
+            lore.add("");
+            lore.add(color("&bInformation:"));
+            lore.add(color("&bPrice: &f"+formatPrice(price(cat,key),cat)));
+            lore.add("");
+            lore.add(color("&e▸ &lCLICK &eto Purchase"));
+            meta.setLore(lore);
+            meta.getPersistentDataContainer().set(actionKey,PersistentDataType.STRING,"product");
+            meta.getPersistentDataContainer().set(categoryKey,PersistentDataType.STRING,cat);
+            meta.getPersistentDataContainer().set(pageKey,PersistentDataType.INTEGER,page);
+            meta.getPersistentDataContainer().set(itemKey,PersistentDataType.STRING,key);
+            shown.setItemMeta(meta);
+            inv.setItem(slot,shown);
         }
         inv.setItem(inv.getSize()-9,tagged(Material.ARROW,"&ePrevious Page",List.of("&7Go to page "+Math.max(1,page-1)),"previous",cat,page,null));
         inv.setItem(inv.getSize()-1,tagged(Material.ARROW,"&eNext Page",List.of("&7Go to page "+(page+1)),"next",cat,page,null));
@@ -119,7 +130,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
-        Inventory inv=Bukkit.createInventory(p,36,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
+        Inventory inv=Bukkit.createInventory(p,27,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
         inv.setItem(4,b.item.clone());
         inv.setItem(9,tagged(Material.RED_CANDLE,"&cRemove 1",List.of("&7Remove one item"),"minus1",b.cat,b.page,b.id));
         inv.setItem(10,tagged(Material.RED_CANDLE,"&cRemove 10",List.of("&7Remove ten items"),"minus10",b.cat,b.page,b.id));
@@ -130,7 +141,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         inv.setItem(15,tagged(Material.LIME_CANDLE,"&aAdd 10",List.of("&7Add ten items"),"plus10",b.cat,b.page,b.id));
         inv.setItem(16,tagged(Material.LIME_CANDLE,"&aAdd 64",List.of("&7Add sixty-four items"),"plus64",b.cat,b.page,b.id));
         inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(b.page+1)),"next",b.cat,b.page,null));
-        inv.setItem(31,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
+        inv.setItem(22,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
         p.openInventory(inv);
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
