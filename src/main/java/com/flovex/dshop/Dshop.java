@@ -565,17 +565,49 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         try {
             if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
             if(provider.equals("COINSENGINE")){
-                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")==null)return false;
+                // CoinsEngine's Player overload returns void. Prefer the UUID overload,
+                // which returns a boolean, and only use the Player overload as a fallback.
+                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")==null
+                        &&Bukkit.getPluginManager().getPlugin("ExcellentEconomy")==null)return false;
                 Class<?> api=Class.forName("su.nightexpress.coinsengine.api.CoinsEngineAPI");
                 Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
-                if(currencyObject==null)return false;
-                for(var method:api.getMethods())if(method.getName().equals("removeBalance")&&method.getParameterCount()==3){
+                if(currencyObject==null){
+                    getLogger().warning("CoinsEngine currency '"+currency+"' was not found. Check category.currency in the category YAML.");
+                    return false;
+                }
+                double balance=-1;
+                for(var method:api.getMethods()){
+                    if(!method.getName().equals("getBalance")||method.getParameterCount()!=2)continue;
                     Class<?>[] types=method.getParameterTypes();
-                    if(types[0].isAssignableFrom(p.getClass())&&types[1].isInstance(currencyObject)&&(types[2]==double.class||types[2]==Double.class)){
-                        Object result=method.invoke(null,p,currencyObject,amount);
-                        return result instanceof Boolean b&&b;
+                    if(types[0]==Player.class&&types[1].isInstance(currencyObject)){
+                        Object value=method.invoke(null,p,currencyObject);
+                        if(value instanceof Number number)balance=number.doubleValue();
+                        break;
                     }
                 }
+                if(balance>=0&&balance<amount)return false;
+                for(var method:api.getMethods()){
+                    if(!method.getName().equals("removeBalance")||method.getParameterCount()!=3)continue;
+                    Class<?>[] types=method.getParameterTypes();
+                    if(types[0]==UUID.class&&types[1].isInstance(currencyObject)
+                            &&(types[2]==double.class||types[2]==Double.class)){
+                        Object result=method.invoke(null,p.getUniqueId(),currencyObject,amount);
+                        return result instanceof Boolean success&&success;
+                    }
+                }
+                // Compatibility fallback for API builds exposing only the void Player overload.
+                if(balance>=amount){
+                    for(var method:api.getMethods()){
+                        if(!method.getName().equals("removeBalance")||method.getParameterCount()!=3)continue;
+                        Class<?>[] types=method.getParameterTypes();
+                        if(types[0]==Player.class&&types[1].isInstance(currencyObject)
+                                &&(types[2]==double.class||types[2]==Double.class)){
+                            method.invoke(null,p,currencyObject,amount);
+                            return true;
+                        }
+                    }
+                }
+                getLogger().warning("No compatible CoinsEngine removeBalance API method was found.");
                 return false;
             }
             if(provider.equals("EXCELENTECONOMY")||provider.equals("EXCELLENTEconomy".toUpperCase(Locale.ROOT))){
