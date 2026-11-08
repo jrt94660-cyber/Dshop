@@ -102,11 +102,11 @@ categories:
     pages:
       '1':
         items:
-          common-key: {slot: 2, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#24981aᴄᴏᴍᴍᴏɴ ᴋᴇʏ", price: 200, command: "crate givekey %player% common"}
-          prime-key: {slot: 3, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#2386d3ᴘʀɪᴍᴇ ᴋᴇʏ", price: 1500, command: "crate givekey %player% prime"}
-          gold-key: {slot: 4, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#e3b900ɢᴏʟᴅ ᴋᴇʏ", price: 1500, command: "crate givekey %player% gold"}
-          amethyst-key: {slot: 5, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#9966CCᴀᴍᴇᴛʜʏꜱᴛ ᴋᴇʏ", price: 4000, command: "crate givekey %player% amethyst"}
-          crimson-key: {slot: 6, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#c42119ᴄʀɪᴍꜱᴏɴ ᴋᴇʏ", price: 2000, command: "crate givekey %player% crimson"}
+          common-key: {slot: 2, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#24981aᴄᴏᴍᴍᴏɴ ᴋᴇʏ", price: 200, command: "crate givekey %player% common 1"}
+          prime-key: {slot: 3, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#2386d3ᴘʀɪᴍᴇ ᴋᴇʏ", price: 1500, command: "crate givekey %player% prime 1"}
+          gold-key: {slot: 4, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#e3b900ɢᴏʟᴅ ᴋᴇʏ", price: 1500, command: "crate givekey %player% gold 1"}
+          amethyst-key: {slot: 5, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#9966CCᴀᴍᴇᴛʜʏꜱᴛ ᴋᴇʏ", price: 4000, command: "crate givekey %player% amethyst 1"}
+          crimson-key: {slot: 6, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#c42119ᴄʀɪᴍꜱᴏɴ ᴋᴇʏ", price: 2000, command: "crate givekey %player% crimson 1"}
           pig-spawner: {slot: 9, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&ePig"], price: 250, command: "ss give %player% give pig %amount%"}
           cow-spawner: {slot: 10, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCow"], price: 350, command: "ss give %player% give cow %amount%"}
           zombie-spawner: {slot: 11, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombie"], price: 400, command: "ss give %player% give zombie %amount%"}
