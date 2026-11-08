@@ -211,7 +211,28 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 String display=String.join(" ",Arrays.copyOfRange(a,2,a.length));
                 data.set("category.display-name",display);saveCategory(cat);msg(p,"&aCategory display name updated.");return true;
             }
-            case "add","remove","price" -> {if(a.length<3){msg(p,"&c/shop "+a[0]+" <category> <page>");return true;}String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}int page;try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}if(a[0].equalsIgnoreCase("add")){ItemStack hand=p.getInventory().getItemInMainHand();if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}sessions.put(p.getUniqueId(),new EditSession("add",cat,page,singleItem(hand)));msg(p,"&eClick an empty slot in the category page to place the item.");}else if(a[0].equalsIgnoreCase("remove")){sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));msg(p,"&eClick the item you want to remove.");}else{sessions.put(p.getUniqueId(),new EditSession("price",cat,page));msg(p,"&eClick the item, then type its price in chat. Type cancel to stop.");}p.closeInventory();openPage(p,cat,page);return true;}
+            case "add","remove","price" -> {
+                boolean add=a[0].equalsIgnoreCase("add");
+                if(a.length<(add?2:3)){msg(p,"&c/shop "+a[0]+" <category>"+(add?" [page]":" <page>"));return true;}
+                String cat=a[1].toLowerCase(Locale.ROOT);
+                if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}
+                int page=1;
+                if(a.length>=3){try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}}
+                if(page<1){msg(p,"&cPage must be 1 or higher.");return true;}
+                if(add){
+                    ItemStack hand=p.getInventory().getItemInMainHand();
+                    if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}
+                    sessions.put(p.getUniqueId(),new EditSession("add",cat,page,singleItem(hand)));
+                    msg(p,"&eClick an empty slot in the category page to place the item.");
+                }else if(a[0].equalsIgnoreCase("remove")){
+                    sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));
+                    msg(p,"&eClick the item you want to remove.");
+                }else{
+                    sessions.put(p.getUniqueId(),new EditSession("price",cat,page));
+                    msg(p,"&eClick an item to edit its price. After saving, you can click another item. Type cancel to finish.");
+                }
+                p.closeInventory();openPage(p,cat,page);return true;
+            }
             default -> msg(p,"&cUnknown command.");
         }return true;
     }
@@ -229,14 +250,17 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "",
             "&e&lADD ITEMS",
             "&7Hold the item in your main hand, then run:",
-            "&f/shop add <category> <page>",
-            "&7Example: &f/shop add blocks 1",
+            "&f/shop add <category> [page]",
+            "&7Example: &f/shop add blocks &7(or &f/shop add blocks 2&7).",
+            "&7Page defaults to 1 if you leave the page number out.",
             "&7Click an empty slot in that page to place it.",
             "&7Its item name, lore, enchantments and item data are kept.",
             "",
             "&e&lSET OR CHANGE A PRICE",
             "&f/shop price <category> <page>",
-            "&7Click the item, then type its price in chat.",
+            "&7Click an item, then type its price in chat.",
+            "&7After saving, click another item to keep editing prices.",
+            "&7Type cancel when you are finished.",
             "&7Examples: &f2500000 &7or &f2.5m",
             "&7Prices are stored in &fplugins/Dshop/prices.yml&7.",
             "",
@@ -393,7 +417,19 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             return;
         }
         EditSession s=sessions.get(e.getPlayer().getUniqueId());if(s==null||!s.type.equals("price"))return;e.setCancelled(true);String input=e.getMessage().trim();
-        Bukkit.getScheduler().runTask(this,()->{Player p=e.getPlayer();if(input.equalsIgnoreCase("cancel")){sessions.remove(p.getUniqueId());msg(p,"&cPrice editing cancelled.");return;}double amount=parseAmount(input);if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}prices.set(s.cat+"."+s.itemId,amount);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aPrice saved: &f"+formatPrice(amount,s.cat));openPage(p,s.cat,s.page);});
+        Bukkit.getScheduler().runTask(this,()->{
+            Player p=e.getPlayer();
+            if(input.equalsIgnoreCase("cancel")){
+                sessions.remove(p.getUniqueId());msg(p,"&cPrice editing finished.");openPage(p,s.cat,s.page);return;
+            }
+            double amount=parseAmount(input);
+            if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}
+            prices.set(s.cat+"."+s.itemId,amount);savePrices();
+            s.itemId=null;
+            sessions.put(p.getUniqueId(),s);
+            msg(p,"&aPrice saved: &f"+formatPrice(amount,s.cat)+" &7| &eClick another item to edit its price, or type cancel to finish.");
+            openPage(p,s.cat,s.page);
+        });
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
