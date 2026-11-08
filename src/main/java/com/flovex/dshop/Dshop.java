@@ -293,6 +293,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         ItemStack clicked=e.getCurrentItem();
         String action=clicked!=null&&clicked.hasItemMeta()?clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING):null;
         IconSession iconSession=iconSessions.get(p.getUniqueId());
+        if(iconSession!=null&&!iconSession.awaitingSearch&&!e.getView().getTitle().equals(color("&8Choose Category Icon"))){
+            iconSessions.remove(p.getUniqueId());iconSession=null;
+        }
         if(iconSession!=null){
             e.setCancelled(true);
             if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory()||action==null)return;
