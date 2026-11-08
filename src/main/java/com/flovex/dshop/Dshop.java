@@ -87,7 +87,10 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(section!=null)for(String key:section.getKeys(false)){
             int slot=section.getInt(key+".slot",-1);if(slot<0||slot>=inv.getSize())continue;
             ItemStack stack=section.getItemStack(key+".item");if(stack==null)continue;
-            ItemStack shown=stack.clone();ItemMeta meta=shown.getItemMeta();
+            ItemStack shown=stack.clone();
+            String configuredName=c.getString("pages."+page+".items."+key+".display-name");
+            ItemMeta meta=shown.getItemMeta();
+            if(configuredName!=null&&!configuredName.isBlank())meta.setDisplayName(color(configuredName));
             List<String> lore=new ArrayList<>();
             lore.add(color("&7Description"));
             if(meta.hasLore())lore.addAll(meta.getLore());
@@ -212,6 +215,20 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 if(material==null||!material.isItem()){msg(p,"&cInvalid item material.");return true;}
                 data.set("category.material",material.name());saveCategory(cat);msg(p,"&aCategory icon changed to &f"+material.name()+"&a.");return true;
             }
+            case "name","rename" -> {
+                if(a.length<3){msg(p,"&c/shop name <category> <page>");return true;}
+                String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}
+                int page;try{page=Integer.parseInt(a[2]);}catch(Exception ex){msg(p,"&cInvalid page.");return true;}
+                sessions.put(p.getUniqueId(),new EditSession("name",cat,page));
+                p.closeInventory();openPage(p,cat,page);msg(p,"&eClick the item whose display name you want to change.");return true;
+            }
+            case "command" -> {
+                if(a.length<3){msg(p,"&c/shop command <category> <page>");return true;}
+                String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}
+                int page;try{page=Integer.parseInt(a[2]);}catch(Exception ex){msg(p,"&cInvalid page.");return true;}
+                sessions.put(p.getUniqueId(),new EditSession("command",cat,page));
+                p.closeInventory();openPage(p,cat,page);msg(p,"&eClick the shop item that should run a command when purchased.");return true;
+            }
             case "setname" -> {
                 if(a.length<3){msg(p,"&c/shop setname <category> <display name>");return true;}
                 String cat=a[1].toLowerCase(Locale.ROOT);YamlConfiguration data=categories.get(cat);
@@ -271,6 +288,18 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "&7Type cancel when you are finished.",
             "&7Examples: &f2500000 &7or &f2.5m",
             "&7Prices are stored in &fplugins/Dshop/prices.yml&7.",
+            "",
+            "&e&lCUSTOM ITEM NAME",
+            "&f/shop name <category> <page>",
+            "&7Click an item, then type its display name in chat.",
+            "&7Supports legacy and hex colors. Type clear to use its original name.",
+            "",
+            "&e&lPURCHASE COMMAND",
+            "&f/shop command <category> <page>",
+            "&7Click an item, then type a console command to run after purchase.",
+            "&7Placeholders: %player%, %amount%, %quantity%, %item%.",
+            "&7Example: crate givekey %player% common %amount%",
+            "&7Type clear to remove its command.",
             "",
             "&e&lREMOVE AN ITEM",
             "&f/shop remove <category> <page>",
@@ -352,7 +381,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             return;
         }
         EditSession edit=sessions.get(p.getUniqueId());
-        if(edit!=null && (edit.type.equals("category")||edit.type.equals("add")||edit.type.equals("remove")||edit.type.equals("price"))){
+        if(edit!=null && (edit.type.equals("category")||edit.type.equals("add")||edit.type.equals("remove")||edit.type.equals("price")||edit.type.equals("name")||edit.type.equals("command"))){
             e.setCancelled(true);
             if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory())return;
             int slot=e.getSlot();
@@ -362,7 +391,10 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             String id=null;ConfigurationSection sec=c.getConfigurationSection(base);if(sec!=null)for(String k:sec.getKeys(false))if(sec.getInt(k+".slot",-1)==slot){id=k;break;}
             if(id==null){msg(p,"&cNo shop item in that slot.");return;}
             if(edit.type.equals("remove")){c.set(base+id,null);prices.set(edit.cat+"."+id,null);saveCategory(edit.cat);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aItem removed.");openPage(p,edit.cat,edit.page);}
-            else{edit.itemId=id;sessions.put(p.getUniqueId(),edit);p.closeInventory();msg(p,"&eType the new price in chat (examples: 2500000, 2.5m). Type cancel to stop.");}
+            else{edit.itemId=id;sessions.put(p.getUniqueId(),edit);p.closeInventory();
+                if(edit.type.equals("price"))msg(p,"&eType the new price in chat (examples: 2500000, 2.5m). Type cancel to stop.");
+                else if(edit.type.equals("name"))msg(p,"&eType the new display name in chat, or type clear to restore the original item name.");
+                else msg(p,"&eType the console command to run after purchase. Use %player%, %amount%, %quantity%, %item%, or type clear to remove it.");}
             return;
         }
         if(action==null)return;e.setCancelled(true);
@@ -375,7 +407,25 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
             case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(b.item.getMaxStackSize(),b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
-            case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);}
+            case "confirm" -> {
+                Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
+                double total=b.unit*b.amount;
+                if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
+                if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
+                YamlConfiguration category=categories.get(b.cat);
+                String command=category.getString("pages."+b.page+".items."+b.id+".commands.purchase","");
+                if(command!=null&&!command.isBlank()){
+                    String parsed=command.replace("%player%",p.getName()).replace("%amount%",String.valueOf(b.amount))
+                            .replace("%quantity%",String.valueOf(b.amount)).replace("%item%",b.item.getType().name());
+                    boolean executed=Bukkit.dispatchCommand(Bukkit.getConsoleSender(),parsed);
+                    if(!executed)getLogger().warning("Purchase command returned false for item "+b.id+": "+parsed);
+                }else{
+                    int remaining=b.amount;
+                    while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);
+                        Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}
+                }
+                purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);
+            }
         }
     }
     private boolean withdraw(Player p,String cat,double amount){
@@ -424,24 +474,39 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             });
             return;
         }
-        EditSession s=sessions.get(e.getPlayer().getUniqueId());if(s==null||!s.type.equals("price"))return;e.setCancelled(true);String input=e.getMessage().trim();
+        EditSession s=sessions.get(e.getPlayer().getUniqueId());if(s==null||!(s.type.equals("price")||s.type.equals("name")||s.type.equals("command")))return;e.setCancelled(true);String input=e.getMessage().trim();
         Bukkit.getScheduler().runTask(this,()->{
             Player p=e.getPlayer();
             if(input.equalsIgnoreCase("cancel")){
                 sessions.remove(p.getUniqueId());msg(p,"&cPrice editing finished.");openPage(p,s.cat,s.page);return;
             }
+            if(s.type.equals("name")){
+                String path="pages."+s.page+".items."+s.itemId+".display-name";
+                if(input.equalsIgnoreCase("clear"))categories.get(s.cat).set(path,null);
+                else categories.get(s.cat).set(path,input);
+                saveCategory(s.cat);sessions.remove(p.getUniqueId());
+                msg(p,input.equalsIgnoreCase("clear")?"&aCustom name cleared.":"&aShop item display name updated.");
+                openPage(p,s.cat,s.page);return;
+            }
+            if(s.type.equals("command")){
+                String path="pages."+s.page+".items."+s.itemId+".commands.purchase";
+                if(input.equalsIgnoreCase("clear"))categories.get(s.cat).set(path,null);
+                else categories.get(s.cat).set(path,input);
+                saveCategory(s.cat);sessions.remove(p.getUniqueId());
+                msg(p,input.equalsIgnoreCase("clear")?"&aPurchase command removed.":"&aPurchase command saved.");
+                openPage(p,s.cat,s.page);return;
+            }
             double amount=parseAmount(input);
             if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}
             prices.set(s.cat+"."+s.itemId,amount);savePrices();
-            s.itemId=null;
-            sessions.put(p.getUniqueId(),s);
+            s.itemId=null;sessions.put(p.getUniqueId(),s);
             msg(p,"&aPrice saved: &f"+formatPrice(amount,s.cat)+" &7| &eClick another item to edit its price, or type cancel to finish.");
             openPage(p,s.cat,s.page);
         });
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
-    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","seticon","setname","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
+    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","name","command","seticon","setname","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
     private static final class IconSession{
         final String category;int page;String query="";boolean awaitingSearch;
         IconSession(String category){this.category=category;}
