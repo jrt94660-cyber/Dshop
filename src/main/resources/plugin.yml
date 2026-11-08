@@ -1,9 +1,12 @@
 name: Dshop
-version: 1.0.20
+version: 1.0.21
 main: com.flovex.dshop.Dshop
 api-version: '1.21'
 softdepend: [Vault, CoinsEngine, ExcellentEconomy]
 commands:
+  shardshop:
+    description: Opens the Shards shop directly
+    usage: /shardshop
   shop:
     description: Opens and manages Dshop
     usage: /shop
