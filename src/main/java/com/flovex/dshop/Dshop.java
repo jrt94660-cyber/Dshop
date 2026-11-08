@@ -177,8 +177,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             shown.setItemMeta(meta);
             inv.setItem(slot,shown);
         }
-        // Return to the category menu from every product-list page.
-        inv.setItem(18,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Categories",
+        // Show the category back button only on the first page of a category.
+        if(page==1)inv.setItem(18,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Categories",
                 List.of("&7Return to the shop categories"),"back_categories",cat,page,null));
         if(pageExists(cat,page-1)){
             inv.setItem(19,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
