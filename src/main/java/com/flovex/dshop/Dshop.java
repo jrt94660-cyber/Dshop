@@ -59,7 +59,43 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             if(root==null)return;
             for(String name:root.getKeys(false)){
                 File file=new File(dir,name.toLowerCase(Locale.ROOT)+".yml");
-                if(file.exists())continue;
+                if(file.exists()){
+                    // Safely migrate only the exact built-in SMPShop commands from the previous defaults.
+                    // Any custom command configured by the server owner is left untouched.
+                    YamlConfiguration existing=YamlConfiguration.loadConfiguration(file);
+                    boolean changed=false;
+                    ConfigurationSection existingPages=existing.getConfigurationSection("pages");
+                    if(existingPages!=null)for(String page:existingPages.getKeys(false)){
+                        ConfigurationSection existingItems=existing.getConfigurationSection("pages."+page+".items");
+                        if(existingItems==null)continue;
+                        for(String itemId:existingItems.getKeys(false)){
+                            String commandPath="pages."+page+".items."+itemId+".command";
+                            String command=existing.getString(commandPath);
+                            if(command==null)continue;
+                            String replacement=switch(command){
+                                case "dc givekey %player% Common %amount%" -> "crate givekey %player% common";
+                                case "dc givekey %player% Prime %amount%" -> "crate givekey %player% prime";
+                                case "dc givekey %player% Gold %amount%" -> "crate givekey %player% gold";
+                                case "dc givekey %player% Amethyst %amount%" -> "crate givekey %player% amethyst";
+                                case "dc givekey %player% Crimson %amount%" -> "crate givekey %player% crimson";
+                                case "ds give %player% pig %amount%" -> "ss give %player% give pig %amount%";
+                                case "ds give %player% cow %amount%" -> "ss give %player% give cow %amount%";
+                                case "ds give %player% zombie %amount%" -> "ss give %player% give zombie %amount%";
+                                case "ds give %player% spider %amount%" -> "ss give %player% give spider %amount%";
+                                case "ds give %player% skeleton %amount%" -> "ss give %player% give skeleton %amount%";
+                                case "ds give %player% creeper %amount%" -> "ss give %player% give creeper %amount%";
+                                case "ds give %player% zombie_piglin %amount%" -> "ss give %player% give zombie_piglin %amount%";
+                                case "ds give %player% blaze %amount%" -> "ss give %player% give blaze %amount%";
+                                case "ds give %player% iron_golem %amount%" -> "ss give %player% give iron_golem %amount%";
+                                default -> null;
+                            };
+                            if(replacement!=null){existing.set(commandPath,replacement);changed=true;}
+                        }
+                    }
+                    if(changed)try{existing.save(file);getLogger().info("Updated built-in SMPShop commands in "+file.getName());}
+                    catch(Exception ex){getLogger().warning("Could not migrate commands in "+file.getName()+": "+ex.getMessage());}
+                    continue;
+                }
                 ConfigurationSection source=root.getConfigurationSection(name);
                 if(source==null)continue;
                 YamlConfiguration target=new YamlConfiguration();
