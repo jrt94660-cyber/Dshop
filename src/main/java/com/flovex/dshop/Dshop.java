@@ -45,6 +45,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         installDefaultCategories();
         loadCategories();
         if(getCommand("shop")!=null){getCommand("shop").setExecutor(this);getCommand("shop").setTabCompleter(this);}
+        if(getCommand("shardshop")!=null)getCommand("shardshop").setExecutor(this);
         Bukkit.getPluginManager().registerEvents(this,this); setupVault();
         getLogger().info("Dshop enabled.");
     }
@@ -312,6 +313,12 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
         if(!(sender instanceof Player p)){sender.sendMessage("Players only.");return true;}
+        if(cmd.getName().equalsIgnoreCase("shardshop")){
+            if(!categories.containsKey("shards")){msg(p,"&cThe Shards category is not configured.");return true;}
+            YamlConfiguration shards=categories.get("shards");
+            openPage(p,"shards",shards.getInt("category.default-page",1));
+            return true;
+        }
         if(a.length==0){openCategories(p);return true;}
         if(!p.hasPermission("dshop.admin")){msg(p,"&cYou don't have permission.");return true;}
         switch(a[0].toLowerCase(Locale.ROOT)){
