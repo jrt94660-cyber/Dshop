@@ -27,6 +27,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private final Map<String,YamlConfiguration> categories = new LinkedHashMap<>();
     private final Map<UUID,EditSession> sessions = new ConcurrentHashMap<>();
     private final Map<UUID,Purchase> purchases = new ConcurrentHashMap<>();
+    private final Map<UUID,IconSession> iconSessions = new ConcurrentHashMap<>();
     private NamespacedKey actionKey, categoryKey, pageKey, itemKey;
     private Economy vault;
     private File pricesFile;
@@ -111,6 +112,31 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         }
         p.openInventory(inv);
     }
+    private void openIconPicker(Player p, IconSession session){
+        List<Material> materials=Arrays.stream(Material.values())
+                .filter(Material::isItem)
+                .filter(m->m!=Material.AIR)
+                .filter(m->session.query.isBlank()||m.name().toLowerCase(Locale.ROOT).contains(session.query.toLowerCase(Locale.ROOT)))
+                .sorted(Comparator.comparing(Material::name))
+                .toList();
+        int pageCount=Math.max(1,(materials.size()+44)/45);
+        session.page=Math.max(0,Math.min(session.page,pageCount-1));
+        Inventory inv=Bukkit.createInventory(p,54,color("&8Choose Category Icon"));
+        int start=session.page*45;
+        for(int i=0;i<45&&start+i<materials.size();i++){
+            Material material=materials.get(start+i);
+            inv.setItem(i,tagged(material,"&f"+material.name().replace('_',' '),
+                    List.of("&7Click to use this as the category icon.","","&e▸ &lCLICK &eto Select"),
+                    "icon_select",session.category,1,material.name()));
+        }
+        if(session.page>0)inv.setItem(45,tagged(Material.ARROW,"&ePrevious Page",List.of("&7Go to the previous page"),"icon_previous",session.category,1,null));
+        inv.setItem(47,tagged(Material.BARRIER,"&cBack",List.of("&7Return to the category menu"),"icon_back",session.category,1,null));
+        inv.setItem(49,tagged(Material.COMPASS,"&bSearch Materials",List.of("&7Current search: &f"+(session.query.isBlank()?"None":session.query),"","&eClick to search by material name"),"icon_search",session.category,1,null));
+        inv.setItem(50,tagged(Material.PAPER,"&fPage &b"+(session.page+1)+"&7/&b"+pageCount,
+                List.of("&7Matching materials: &f"+materials.size()),"icon_info",session.category,1,null));
+        if(session.page+1<pageCount)inv.setItem(53,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to the next page"),"icon_next",session.category,1,null));
+        p.openInventory(inv);
+    }
     private boolean pageExists(String cat,int page){
         if(page<1)return false;
         YamlConfiguration data=categories.get(cat);
@@ -165,9 +191,15 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",Integer.parseInt(a[2]));y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
             case "seticon" -> {
-                if(a.length<3){msg(p,"&c/shop seticon <category> <material>");return true;}
+                if(a.length<2){msg(p,"&c/shop seticon <category>");return true;}
                 String cat=a[1].toLowerCase(Locale.ROOT);YamlConfiguration data=categories.get(cat);
                 if(data==null){msg(p,"&cCategory not found.");return true;}
+                if(a.length==2){
+                    IconSession session=new IconSession(cat);
+                    iconSessions.put(p.getUniqueId(),session);
+                    openIconPicker(p,session);
+                    return true;
+                }
                 Material material=Material.matchMaterial(a[2].toUpperCase(Locale.ROOT));
                 if(material==null||!material.isItem()){msg(p,"&cInvalid item material.");return true;}
                 data.set("category.material",material.name());saveCategory(cat);msg(p,"&aCategory icon changed to &f"+material.name()+"&a.");return true;
@@ -220,9 +252,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "&7Previous/Next arrows only appear when those pages exist.",
             "",
             "&e&lCHANGE CATEGORY ICON AND DISPLAY NAME",
-            "&f/shop seticon <category> <material>",
-            "&7Example: &f/shop seticon blocks DIAMOND",
-            "&7Changes the category button item icon.",
+            "&f/shop seticon <category>",
+            "&7Opens a searchable material picker with pages.",
+            "&7Click any item to use it as the category icon.",
             "&f/shop setname <category> <display name>",
             "&7Example: &f/shop setname blocks &#38BDFB&lBlocks Shop",
             "&7Supports color codes (&f& and &#RRGGBB&7).",
@@ -260,6 +292,30 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(!(e.getWhoClicked() instanceof Player p))return;
         ItemStack clicked=e.getCurrentItem();
         String action=clicked!=null&&clicked.hasItemMeta()?clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING):null;
+        IconSession iconSession=iconSessions.get(p.getUniqueId());
+        if(iconSession!=null){
+            e.setCancelled(true);
+            if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory()||action==null)return;
+            switch(action){
+                case "icon_select" -> {
+                    String materialName=clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING);
+                    Material material=materialName==null?null:Material.matchMaterial(materialName);
+                    YamlConfiguration category=categories.get(iconSession.category);
+                    if(material==null||category==null)return;
+                    category.set("category.material",material.name());saveCategory(iconSession.category);
+                    iconSessions.remove(p.getUniqueId());p.closeInventory();
+                    msg(p,"&aCategory icon changed to &f"+material.name()+"&a.");
+                }
+                case "icon_previous" -> {iconSession.page--;openIconPicker(p,iconSession);}
+                case "icon_next" -> {iconSession.page++;openIconPicker(p,iconSession);}
+                case "icon_search" -> {
+                    iconSession.awaitingSearch=true;p.closeInventory();
+                    msg(p,"&eType a material name to search. Type &fcancel &eto return.");
+                }
+                case "icon_back" -> {iconSessions.remove(p.getUniqueId());p.closeInventory();openCategories(p);}
+            }
+            return;
+        }
         EditSession edit=sessions.get(p.getUniqueId());
         if(edit!=null && (edit.type.equals("category")||edit.type.equals("add")||edit.type.equals("remove")||edit.type.equals("price"))){
             e.setCancelled(true);
@@ -323,12 +379,26 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         return false;
     }
     @EventHandler public void onChat(AsyncPlayerChatEvent e){
+        IconSession icon=iconSessions.get(e.getPlayer().getUniqueId());
+        if(icon!=null&&icon.awaitingSearch){
+            e.setCancelled(true);String input=e.getMessage().trim();
+            Bukkit.getScheduler().runTask(this,()->{
+                Player p=e.getPlayer();
+                if(input.equalsIgnoreCase("cancel")){iconSessions.remove(p.getUniqueId());msg(p,"&cIcon selection cancelled.");openCategories(p);return;}
+                icon.query=input;icon.page=0;icon.awaitingSearch=false;openIconPicker(p,icon);
+            });
+            return;
+        }
         EditSession s=sessions.get(e.getPlayer().getUniqueId());if(s==null||!s.type.equals("price"))return;e.setCancelled(true);String input=e.getMessage().trim();
         Bukkit.getScheduler().runTask(this,()->{Player p=e.getPlayer();if(input.equalsIgnoreCase("cancel")){sessions.remove(p.getUniqueId());msg(p,"&cPrice editing cancelled.");return;}double amount=parseAmount(input);if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}prices.set(s.cat+"."+s.itemId,amount);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aPrice saved: &f"+formatPrice(amount,s.cat));openPage(p,s.cat,s.page);});
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
     @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","seticon","setname","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
+    private static final class IconSession{
+        final String category;int page;String query="";boolean awaitingSearch;
+        IconSession(String category){this.category=category;}
+    }
     private static final class Purchase{final String cat,id;final int page;final ItemStack item;final double unit;int amount;Purchase(String c,int p,String i,ItemStack it,double u,int a){cat=c;page=p;id=i;item=it;unit=u;amount=a;}}
     private static final class EditSession{final String type,cat;final int page;final ItemStack item;String itemId;EditSession(String t,String c,int p){this(t,c,p,null);}EditSession(String t,String c,int p,ItemStack i){type=t;cat=c;page=p;item=i;}}
 }
