@@ -103,9 +103,18 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             shown.setItemMeta(meta);
             inv.setItem(slot,shown);
         }
-        inv.setItem(inv.getSize()-9,tagged(Material.ARROW,"&ePrevious Page",List.of("&7Go to page "+Math.max(1,page-1)),"previous",cat,page,null));
-        inv.setItem(inv.getSize()-1,tagged(Material.ARROW,"&eNext Page",List.of("&7Go to page "+(page+1)),"next",cat,page,null));
+        if(pageExists(cat,page-1)){
+            inv.setItem(18,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
+        }
+        if(pageExists(cat,page+1)){
+            inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(page+1)),"next",cat,page,null));
+        }
         p.openInventory(inv);
+    }
+    private boolean pageExists(String cat,int page){
+        if(page<1)return false;
+        YamlConfiguration data=categories.get(cat);
+        return data!=null&&data.isConfigurationSection("pages."+page+".items");
     }
     private double price(String cat,String id){return prices.getDouble(cat+"."+id,0);}
     private String formatPrice(double amount,String category){
@@ -131,17 +140,17 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
         Inventory inv=Bukkit.createInventory(p,27,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
-        inv.setItem(4,b.item.clone());
-        inv.setItem(9,tagged(Material.RED_CANDLE,"&cRemove 1",List.of("&7Remove one item"),"minus1",b.cat,b.page,b.id));
-        inv.setItem(10,tagged(Material.RED_CANDLE,"&cRemove 10",List.of("&7Remove ten items"),"minus10",b.cat,b.page,b.id));
-        inv.setItem(11,tagged(Material.RED_CANDLE,"&cRemove 64",List.of("&7Remove sixty-four items"),"minus64",b.cat,b.page,b.id));
-        inv.setItem(12,tagged(Material.RED_STAINED_GLASS_PANE,"&cCancel",List.of("&7Cancel this purchase"),"cancel",b.cat,b.page,b.id));
-        inv.setItem(18,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Return to page "+Math.max(1,b.page-1)),"previous",b.cat,b.page,null));
-        inv.setItem(14,tagged(Material.LIME_CANDLE,"&aAdd 1",List.of("&7Add one item"),"plus1",b.cat,b.page,b.id));
-        inv.setItem(15,tagged(Material.LIME_CANDLE,"&aAdd 10",List.of("&7Add ten items"),"plus10",b.cat,b.page,b.id));
-        inv.setItem(16,tagged(Material.LIME_CANDLE,"&aAdd 64",List.of("&7Add sixty-four items"),"plus64",b.cat,b.page,b.id));
-        inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(b.page+1)),"next",b.cat,b.page,null));
-        inv.setItem(22,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
+        ItemStack preview=b.item.clone();
+        preview.setAmount(Math.min(b.amount,preview.getMaxStackSize()));
+        inv.setItem(13,preview);
+        inv.setItem(9,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
+        inv.setItem(10,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
+        inv.setItem(11,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
+        inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
+        inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
+        inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+64",List.of("&7Add 64 items"),"plus64",b.cat,b.page,b.id));
+        inv.setItem(20,tagged(Material.RED_STAINED_GLASS_PANE,"&cCancel",List.of("&7Return to this category's item list"),"cancel",b.cat,b.page,b.id));
+        inv.setItem(24,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
         p.openInventory(inv);
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
