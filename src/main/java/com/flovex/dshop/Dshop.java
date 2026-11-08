@@ -143,14 +143,16 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         ItemStack preview=b.item.clone();
         preview.setAmount(Math.min(b.amount,preview.getMaxStackSize()));
         inv.setItem(13,preview);
-        inv.setItem(9,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
-        inv.setItem(10,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
-        inv.setItem(11,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
+        // Quantity controls sit directly beside the item preview.
+        inv.setItem(10,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
+        inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
+        inv.setItem(12,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
         inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
         inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
         inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+64",List.of("&7Add 64 items"),"plus64",b.cat,b.page,b.id));
-        inv.setItem(20,tagged(Material.RED_STAINED_GLASS_PANE,"&cCancel",List.of("&7Return to this category's item list"),"cancel",b.cat,b.page,b.id));
-        inv.setItem(24,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
+        // Back and confirm sit directly beneath the -1 and +1 controls.
+        inv.setItem(21,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Item List",List.of("&7Cancel this purchase","&7Return to the item list"),"cancel",b.cat,b.page,b.id));
+        inv.setItem(23,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
         p.openInventory(inv);
     }
     @Override public boolean onCommand(CommandSender sender,Command cmd,String label,String[] a){
