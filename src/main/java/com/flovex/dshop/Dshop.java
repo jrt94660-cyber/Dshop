@@ -176,8 +176,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             shown.setItemMeta(meta);
             inv.setItem(slot,shown);
         }
+        // Return to the category menu from every product-list page.
+        inv.setItem(18,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Categories",
+                List.of("&7Return to the shop categories"),"back_categories",cat,page,null));
         if(pageExists(cat,page-1)){
-            inv.setItem(18,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
+            inv.setItem(19,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
         }
         if(pageExists(cat,page+1)){
             inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(page+1)),"next",cat,page,null));
@@ -500,6 +503,12 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             e.setCancelled(true);
             if(e.getClickedInventory()==null||e.getClickedInventory()!=e.getView().getTopInventory())return;
             int slot=e.getSlot();
+            if(action!=null&&action.equals("back_categories")){
+                sessions.remove(p.getUniqueId());
+                p.closeInventory();
+                openCategories(p);
+                return;
+            }
             if(edit.type.equals("category")){YamlConfiguration c=categories.get(edit.cat);c.set("category.slot",slot);saveCategory(edit.cat);sessions.remove(p.getUniqueId());p.closeInventory();msg(p,"&aCategory slot saved.");return;}
             YamlConfiguration c=categories.get(edit.cat);String base="pages."+edit.page+".items.";
             if(edit.type.equals("add")){if(clicked!=null&&clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);writeReadableItem(c,base+id,edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
@@ -517,6 +526,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         int page=clicked.getItemMeta().getPersistentDataContainer().getOrDefault(pageKey,PersistentDataType.INTEGER,1);
         switch(action){
             case "category" -> openPage(p,cat,page);
+            case "back_categories" -> {purchases.remove(p.getUniqueId());openCategories(p);}
             case "previous" -> openPage(p,cat,Math.max(1,page-1));
             case "next" -> openPage(p,cat,page+1);
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
