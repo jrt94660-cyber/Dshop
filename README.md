@@ -30,7 +30,7 @@ Each category can use a different provider:
 - `COINSENGINE` (currency ID is set by `category.currency`)
 - `EXCELENTECONOMY` (currency ID is set by `category.currency`)
 
-Vault requires Vault and a registered economy provider. CoinsEngine and ExcellentEconomy are soft dependencies.
+Vault requires Vault and a registered economy provider. CoinsEngine and ExcellentEconomy are soft dependencies. Dshop uses the UUID-based CoinsEngine withdrawal API when available and supports older Player-based API builds.
 
 ## Build
 
