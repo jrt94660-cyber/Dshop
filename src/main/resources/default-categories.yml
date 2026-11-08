@@ -1,0 +1,118 @@
+# Built-in starter shop based on the user-provided SMPShop 26.3 configuration.
+# These defaults are copied only when the matching category file does not already exist.
+categories:
+  end:
+    category:
+      name: End
+      display-name: "&#0bf592ᴇɴᴅ"
+      description: "End items and materials."
+      material: END_STONE
+      slot: 11
+      default-page: 1
+      economy: VAULT
+      currency: ""
+    pages:
+      '1':
+        items:
+          ender-chest: {slot: 9, material: ENDER_CHEST, amount: 1, item-name: "&fEnder Chest", price: 2500}
+          ender-pearl: {slot: 10, material: ENDER_PEARL, amount: 1, item-name: "&fEnder Pearl", price: 75}
+          end-stone: {slot: 11, material: END_STONE, amount: 1, item-name: "&fEnd Stone", price: 32}
+          dragon-breath: {slot: 12, material: DRAGON_BREATH, amount: 1, item-name: "&eDragon's Breath", price: 32}
+          end-rod: {slot: 13, material: END_ROD, amount: 1, item-name: "&fEnd Rod", price: 100}
+          chorus-fruit: {slot: 14, material: CHORUS_FRUIT, amount: 1, item-name: "&fChorus Fruit", price: 10}
+          popped-chorus-fruit: {slot: 15, material: POPPED_CHORUS_FRUIT, amount: 1, item-name: "&fPopped Chorus Fruit", price: 15}
+          shulker-shell: {slot: 16, material: SHULKER_SHELL, amount: 1, item-name: "&fShulker Shell", price: 350}
+          shulker-box: {slot: 17, material: SHULKER_BOX, amount: 1, item-name: "&fShulker Box", price: 800}
+  nether:
+    category:
+      name: Nether
+      display-name: "&#0bf592ɴᴇᴛʜᴇʀ"
+      description: "Nether items and materials."
+      material: MAGMA_BLOCK
+      slot: 12
+      default-page: 1
+      economy: VAULT
+      currency: ""
+    pages:
+      '1':
+        items:
+          blaze-rod: {slot: 9, material: BLAZE_ROD, amount: 1, item-name: "&fBlaze Rod", price: 150}
+          glowstone-dust: {slot: 10, material: GLOWSTONE_DUST, amount: 1, item-name: "&fGlowstone Dust", price: 15}
+          magma-cream: {slot: 11, material: MAGMA_CREAM, amount: 1, item-name: "&fMagma Cream", price: 15}
+          ghast-tear: {slot: 12, material: GHAST_TEAR, amount: 1, item-name: "&fGhast Tear", price: 350}
+          nether-quartz: {slot: 13, material: NETHER_QUARTZ_ORE, amount: 1, item-name: "&fNether Quartz", price: 15}
+          soul-sand: {slot: 14, material: SOUL_SAND, amount: 1, item-name: "&fSoul Sand", price: 15}
+          magma-block: {slot: 15, material: MAGMA_BLOCK, amount: 1, item-name: "&fMagma Block", price: 35}
+          crying-obsidian: {slot: 16, material: CRYING_OBSIDIAN, amount: 1, item-name: "&fCrying Obsidian", price: 150}
+          nether-wart: {slot: 17, material: NETHER_WART, amount: 1, item-name: "&fNether Wart", price: 20}
+  gear:
+    category:
+      name: Gear
+      display-name: "&#0bf592ɢᴇᴀʀ"
+      description: "Combat and utility gear."
+      material: TOTEM_OF_UNDYING
+      slot: 13
+      default-page: 1
+      economy: VAULT
+      currency: ""
+    pages:
+      '1':
+        items:
+          obsidian: {slot: 9, material: OBSIDIAN, amount: 1, item-name: "&fObsidian", price: 100}
+          end-crystal: {slot: 10, material: END_CRYSTAL, amount: 1, item-name: "&fEnd Crystal", price: 350}
+          respawn-anchor: {slot: 11, material: RESPAWN_ANCHOR, amount: 1, item-name: "&fRespawn Anchor", price: 1000}
+          glowstone: {slot: 12, material: GLOWSTONE, amount: 1, item-name: "&fGlowstone", price: 100}
+          totem-of-undying: {slot: 13, material: TOTEM_OF_UNDYING, amount: 1, item-name: "&eTotem of Undying", price: 1250}
+          gear-ender-pearl: {slot: 14, material: ENDER_PEARL, amount: 1, item-name: "&fEnder Pearl", price: 75}
+          golden-apple: {slot: 15, material: GOLDEN_APPLE, amount: 1, item-name: "&bGolden Apple", price: 250}
+          bottle-enchanting: {slot: 16, material: EXPERIENCE_BOTTLE, amount: 1, item-name: "&eBottle o' Enchanting", price: 100}
+          arrow: {slot: 17, material: ARROW, amount: 1, item-name: "&fArrow", price: 500}
+  food:
+    category:
+      name: Food
+      display-name: "&#0bf592ꜰᴏᴏᴅ"
+      description: "Food and consumables."
+      material: COOKED_BEEF
+      slot: 14
+      default-page: 1
+      economy: VAULT
+      currency: ""
+    pages:
+      '1':
+        items:
+          potato: {slot: 9, material: POTATO, amount: 1, item-name: "&fPotato", price: 25}
+          sweet-berries: {slot: 10, material: SWEET_BERRIES, amount: 1, item-name: "&fSweet Berries", price: 15}
+          melon-slice: {slot: 11, material: MELON_SLICE, amount: 1, item-name: "&fMelon Slice", price: 10}
+          carrot: {slot: 12, material: CARROT, amount: 1, item-name: "&fCarrot", price: 25}
+          apple: {slot: 13, material: APPLE, amount: 1, item-name: "&fApple", price: 25}
+          cooked-chicken: {slot: 14, material: COOKED_CHICKEN, amount: 1, item-name: "&fCooked Chicken", price: 30}
+          steak: {slot: 15, material: COOKED_BEEF, amount: 1, item-name: "&fSteak", price: 35}
+          golden-carrot: {slot: 16, material: GOLDEN_CARROT, amount: 1, item-name: "&fGolden Carrot", price: 50}
+          golden-apple: {slot: 17, material: GOLDEN_APPLE, amount: 1, item-name: "&bGolden Apple", price: 250}
+  shards:
+    category:
+      name: Shards
+      display-name: "&#0bf592sʜᴀʀᴅs"
+      description: "Crate keys and mob spawners."
+      material: AMETHYST_SHARD
+      slot: 15
+      default-page: 1
+      economy: COINSENGINE
+      currency: shards
+    pages:
+      '1':
+        items:
+          common-key: {slot: 2, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#24981aᴄᴏᴍᴍᴏɴ ᴋᴇʏ", price: 200, command: "dc givekey %player% Common %amount%"}
+          prime-key: {slot: 3, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#2386d3ᴘʀɪᴍᴇ ᴋᴇʏ", price: 1500, command: "dc givekey %player% Prime %amount%"}
+          gold-key: {slot: 4, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#e3b900ɢᴏʟᴅ ᴋᴇʏ", price: 1500, command: "dc givekey %player% Gold %amount%"}
+          amethyst-key: {slot: 5, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#9966CCᴀᴍᴇᴛʜʏꜱᴛ ᴋᴇʏ", price: 4000, command: "dc givekey %player% Amethyst %amount%"}
+          crimson-key: {slot: 6, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#c42119ᴄʀɪᴍꜱᴏɴ ᴋᴇʏ", price: 2000, command: "dc givekey %player% Crimson %amount%"}
+          pig-spawner: {slot: 9, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&ePig"], price: 250, command: "ds give %player% pig %amount%"}
+          cow-spawner: {slot: 10, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCow"], price: 350, command: "ds give %player% cow %amount%"}
+          zombie-spawner: {slot: 11, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombie"], price: 400, command: "ds give %player% zombie %amount%"}
+          spider-spawner: {slot: 12, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSpider"], price: 750, command: "ds give %player% spider %amount%"}
+          skeleton-spawner: {slot: 13, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSkeleton"], price: 500, command: "ds give %player% skeleton %amount%"}
+          creeper-spawner: {slot: 14, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCreeper"], price: 625, command: "ds give %player% creeper %amount%"}
+          zombified-piglin-spawner: {slot: 15, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombified Piglin"], price: 750, command: "ds give %player% zombie_piglin %amount%"}
+          blaze-spawner: {slot: 16, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eBlaze"], price: 1000, command: "ds give %player% blaze %amount%"}
+          iron-golem-spawner: {slot: 17, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eIron Golem"], price: 1500, command: "ds give %player% iron_golem %amount%"}
