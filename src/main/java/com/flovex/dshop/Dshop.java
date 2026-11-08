@@ -246,7 +246,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         switch(a[0].toLowerCase(Locale.ROOT)){
             case "edit" -> { sendEditGuide(p); return true; }
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
-            case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",Integer.parseInt(a[2]));y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
+            case "create" -> {if(a.length<2){msg(p,"&c/shop create <category>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}int firstPage=1;YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",firstPage);y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+firstPage+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,firstPage));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
             case "seticon" -> {
                 if(a.length<2){msg(p,"&c/shop seticon <category>");return true;}
@@ -315,7 +315,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "&7A quick guide to creating and managing your shop.",
             "",
             "&e&lCREATE A CATEGORY",
-            "&f/shop create <category> <page>",
+            "&f/shop create <category>",
             "&7Example: &f/shop create blocks 1",
             "&7Creates the category and its first page. Click an empty",
             "&7slot in the category menu to choose its position.",
