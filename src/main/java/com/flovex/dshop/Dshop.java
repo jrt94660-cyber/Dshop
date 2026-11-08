@@ -618,14 +618,40 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 return false;
             }
             if(provider.equals("EXCELENTECONOMY")||provider.equals("EXCELLENTEconomy".toUpperCase(Locale.ROOT))){
+                // ExcellentEconomy 2.8+ exposes its API through Bukkit's ServicesManager.
+                // Match the documented cached overloads by their exact argument types;
+                // blindly invoking the first three-argument overload can pass a String
+                // where ExcellentCurrency is expected and causes IllegalArgumentException.
                 Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
-                Object registration=Bukkit.getServicesManager().getRegistration(api);
+                RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(api);
                 if(registration==null)return false;
-                Object instance=registration.getClass().getMethod("getProvider").invoke(registration);
-                for(var method:api.getMethods())if(method.getName().equals("withdraw")&&method.getParameterCount()==3){
-                    Object result=method.invoke(instance,p,currency,amount);
-                    return result instanceof Boolean b&&b;
+                Object instance=registration.getProvider();
+                try {
+                    Object result=api.getMethod("withdraw",Player.class,String.class,double.class)
+                            .invoke(instance,p,currency,amount);
+                    return Boolean.TRUE.equals(result);
+                } catch(NoSuchMethodException ignored) {
+                    // Older/API variants may expose only the ExcellentCurrency overload.
                 }
+                Object currencyObject=null;
+                try {
+                    currencyObject=api.getMethod("getCurrency",String.class).invoke(instance,currency);
+                } catch(NoSuchMethodException ignored) {
+                    // Fall through to a compatible currency lookup if this API variant differs.
+                }
+                if(currencyObject==null)return false;
+                for(var method:api.getMethods()){
+                    if(!method.getName().equals("withdraw")||method.getParameterCount()!=3)continue;
+                    Class<?>[] types=method.getParameterTypes();
+                    if(types[0].isAssignableFrom(Player.class)
+                            &&types[1].isInstance(currencyObject)
+                            &&(types[2]==double.class||types[2]==Double.class)){
+                        Object result=method.invoke(instance,p,currencyObject,amount);
+                        return Boolean.TRUE.equals(result);
+                    }
+                }
+                getLogger().warning("No compatible ExcellentEconomy withdraw(Player, currency, double) method was found.");
+                return false;
             }
         } catch(Exception ex) {
             getLogger().warning("Economy withdrawal failed for "+provider+": "+ex.getClass().getSimpleName()+" - "+ex.getMessage());
