@@ -9,6 +9,7 @@ import org.bukkit.command.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -86,7 +87,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         ConfigurationSection section=c.getConfigurationSection("pages."+page+".items");
         if(section!=null)for(String key:section.getKeys(false)){
             int slot=section.getInt(key+".slot",-1);if(slot<0||slot>=inv.getSize())continue;
-            ItemStack stack=section.getItemStack(key+".item");if(stack==null)continue;
+            ItemStack stack=getShopItem(c,"pages."+page+".items."+key);if(stack==null)continue;
             ItemStack shown=stack.clone();
             String configuredName=c.getString("pages."+page+".items."+key+".display-name");
             ItemMeta meta=shown.getItemMeta();
@@ -145,7 +146,48 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         YamlConfiguration data=categories.get(cat);
         return data!=null&&data.isConfigurationSection("pages."+page+".items");
     }
-    private double price(String cat,String id){return prices.getDouble(cat+"."+id,0);}
+    // Human-readable item fields; old serialized ItemStacks remain readable.
+    private ItemStack getShopItem(YamlConfiguration data,String path){
+        if(data.isItemStack(path+".item")) return data.getItemStack(path+".item");
+        Material material=Material.matchMaterial(data.getString(path+".material",""));
+        if(material==null||material==Material.AIR||!material.isItem())return null;
+        ItemStack stack=new ItemStack(material,Math.max(1,data.getInt(path+".amount",1)));
+        ItemMeta meta=stack.getItemMeta();
+        String originalName=data.getString(path+".item-name");
+        if(originalName!=null)meta.setDisplayName(color(originalName));
+        List<String> lore=data.getStringList(path+".lore");
+        if(!lore.isEmpty())meta.setLore(lore.stream().map(this::color).toList());
+        ConfigurationSection enchants=data.getConfigurationSection(path+".enchantments");
+        if(enchants!=null)for(String name:enchants.getKeys(false)){
+            Enchantment enchantment=Enchantment.getByKey(NamespacedKey.minecraft(name.toLowerCase(Locale.ROOT)));
+            if(enchantment!=null)meta.addEnchant(enchantment,enchants.getInt(name),true);
+        }
+        stack.setItemMeta(meta);
+        return stack;
+    }
+    private void writeReadableItem(YamlConfiguration data,String path,ItemStack stack){
+        data.set(path+".item",null);
+        data.set(path+".material",stack.getType().name());
+        data.set(path+".amount",stack.getAmount());
+        ItemMeta meta=stack.getItemMeta();
+        data.set(path+".item-name",meta!=null&&meta.hasDisplayName()?meta.getDisplayName():null);
+        data.set(path+".lore",meta!=null&&meta.hasLore()?meta.getLore():null);
+        data.set(path+".enchantments",null);
+        if(meta!=null&&!meta.getEnchants().isEmpty())for(var entry:meta.getEnchants().entrySet())
+            data.set(path+".enchantments."+entry.getKey().getKey().getKey(),entry.getValue());
+    }
+    private String findItemPath(YamlConfiguration data,String id){
+        ConfigurationSection pages=data.getConfigurationSection("pages");
+        if(pages!=null)for(String page:pages.getKeys(false)){
+            String path="pages."+page+".items."+id;
+            if(data.contains(path+".slot"))return path;
+        }
+        return "pages.1.items."+id;
+    }
+    private double price(String cat,String id){
+        YamlConfiguration data=categories.get(cat);
+        return data!=null&&data.isConfigurationSection("pages") ? data.getDouble(findItemPath(data,id)+".price",prices.getDouble(cat+"."+id,0)) : prices.getDouble(cat+"."+id,0);
+    }
     private String formatPrice(double amount,String category){
         YamlConfiguration data=categories.get(category);
         String provider=data==null?"VAULT":data.getString("category.economy","VAULT").toUpperCase(Locale.ROOT);
@@ -162,7 +204,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         return symbol+new DecimalFormat(getConfig().getString("currency.format","#,##0.##")).format(amount);
     }
     private void openPurchase(Player p,String cat,int page,String id){
-        YamlConfiguration c=categories.get(cat);ItemStack stack=c.getItemStack("pages."+page+".items."+id+".item");if(stack==null)return;
+        YamlConfiguration c=categories.get(cat);ItemStack stack=getShopItem(c,"pages."+page+".items."+id);if(stack==null)return;
         double unit=price(cat,id);if(unit<=0){msg(p,"&cThis item has no valid price.");return;}
         ItemStack purchaseItem=stack.clone();
         String configuredName=c.getString("pages."+page+".items."+id+".display-name");
@@ -284,7 +326,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "&7Example: &f/shop add blocks &7(or &f/shop add blocks 2&7).",
             "&7Page defaults to 1 if you leave the page number out.",
             "&7Click an empty slot in that page to place it.",
-            "&7Its item name, lore, enchantments and item data are kept.",
+            "&7Material, amount, item name, lore and enchantments are saved as readable YAML fields.",
             "",
             "&e&lSET OR CHANGE A PRICE",
             "&f/shop price <category> <page>",
@@ -392,7 +434,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             int slot=e.getSlot();
             if(edit.type.equals("category")){YamlConfiguration c=categories.get(edit.cat);c.set("category.slot",slot);saveCategory(edit.cat);sessions.remove(p.getUniqueId());p.closeInventory();msg(p,"&aCategory slot saved.");return;}
             YamlConfiguration c=categories.get(edit.cat);String base="pages."+edit.page+".items.";
-            if(edit.type.equals("add")){if(clicked!=null&&clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);c.set(base+id+".item",edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
+            if(edit.type.equals("add")){if(clicked!=null&&clicked.getType()!=Material.AIR){msg(p,"&cChoose an empty slot.");return;}String id=UUID.randomUUID().toString().substring(0,8);c.set(base+id+".slot",slot);writeReadableItem(c,base+id,edit.item);saveCategory(edit.cat);sessions.remove(p.getUniqueId());msg(p,"&aItem added.");openPage(p,edit.cat,edit.page);return;}
             String id=null;ConfigurationSection sec=c.getConfigurationSection(base);if(sec!=null)for(String k:sec.getKeys(false))if(sec.getInt(k+".slot",-1)==slot){id=k;break;}
             if(id==null){msg(p,"&cNo shop item in that slot.");return;}
             if(edit.type.equals("remove")){c.set(base+id,null);prices.set(edit.cat+"."+id,null);saveCategory(edit.cat);savePrices();sessions.remove(p.getUniqueId());msg(p,"&aItem removed.");openPage(p,edit.cat,edit.page);}
@@ -418,7 +460,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
                 if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
                 YamlConfiguration category=categories.get(b.cat);
-                String command=category.getString("pages."+b.page+".items."+b.id+".commands.purchase","");
+                String command=category.getString("pages."+b.page+".items."+b.id+".command",category.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
                 if(command!=null&&!command.isBlank()){
                     String parsed=command.replace("%player%",p.getName()).replace("%amount%",String.valueOf(b.amount))
                             .replace("%quantity%",String.valueOf(b.amount)).replace("%item%",b.item.getType().name());
@@ -494,7 +536,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 openPage(p,s.cat,s.page);return;
             }
             if(s.type.equals("command")){
-                String path="pages."+s.page+".items."+s.itemId+".commands.purchase";
+                String path="pages."+s.page+".items."+s.itemId+".command";
                 if(input.equalsIgnoreCase("clear"))categories.get(s.cat).set(path,null);
                 else categories.get(s.cat).set(path,input);
                 saveCategory(s.cat);sessions.remove(p.getUniqueId());
@@ -503,7 +545,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             }
             double amount=parseAmount(input);
             if(!Double.isFinite(amount)||amount<=0){msg(p,"&cInvalid price. Try 2500000 or 2.5m.");return;}
-            prices.set(s.cat+"."+s.itemId,amount);savePrices();
+            prices.set(s.cat+"."+s.itemId,amount);YamlConfiguration priceCategory=categories.get(s.cat);priceCategory.set(findItemPath(priceCategory,s.itemId)+".price",amount);saveCategory(s.cat);savePrices();
             s.itemId=null;sessions.put(p.getUniqueId(),s);
             msg(p,"&aPrice saved: &f"+formatPrice(amount,s.cat)+" &7| &eClick another item to edit its price, or type cancel to finish.");
             openPage(p,s.cat,s.page);
