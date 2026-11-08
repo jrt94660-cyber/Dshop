@@ -169,13 +169,21 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         ItemStack preview=b.item.clone();
         preview.setAmount(Math.min(b.amount,preview.getMaxStackSize()));
         inv.setItem(13,preview);
-        // Quantity controls sit directly beside the item preview.
-        inv.setItem(10,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
-        inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
-        inv.setItem(12,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
-        inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
-        inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
-        inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+64",List.of("&7Add 64 items"),"plus64",b.cat,b.page,b.id));
+        // Quantity is limited to one inventory stack. Non-stackable items (for example, totems)
+        // do not show quantity controls; 16-stack items (for example, ender pearls) cap at 16.
+        int maxStack = b.item.getMaxStackSize();
+        if (maxStack > 1) {
+            if (maxStack >= 10) {
+                inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
+                inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
+            }
+            inv.setItem(12,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
+            inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
+            if (maxStack >= 64) {
+                inv.setItem(10,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
+                inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+64",List.of("&7Add 64 items"),"plus64",b.cat,b.page,b.id));
+            }
+        }
         // Back and confirm sit directly beneath the -1 and +1 controls.
         inv.setItem(21,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Item List",List.of("&7Cancel this purchase","&7Return to the item list"),"cancel",b.cat,b.page,b.id));
         inv.setItem(23,tagged(Material.LIME_STAINED_GLASS_PANE,"&aConfirm Purchase",List.of("&7Quantity: &f"+b.amount,"&7Total: &a"+formatPrice(b.unit*b.amount,b.cat)),"confirm",b.cat,b.page,b.id));
@@ -365,9 +373,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "previous" -> openPage(p,cat,Math.max(1,page-1));
             case "next" -> openPage(p,cat,page+1);
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
-            case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(2304,b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
+            case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(b.item.getMaxStackSize(),b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
-            case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()*36){msg(p,"&cThat quantity is too large.");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);}
+            case "confirm" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;double total=b.unit*b.amount;if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}int remaining=b.amount;while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));openPage(p,b.cat,b.page);}
         }
     }
     private boolean withdraw(Player p,String cat,double amount){
