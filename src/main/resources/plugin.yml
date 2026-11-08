@@ -1,5 +1,5 @@
 name: Dshop
-version: 1.0.19
+version: 1.0.20
 main: com.flovex.dshop.Dshop
 api-version: '1.21'
 softdepend: [Vault, CoinsEngine, ExcellentEconomy]
