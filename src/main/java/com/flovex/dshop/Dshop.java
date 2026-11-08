@@ -78,6 +78,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                                 case "dc givekey %player% Gold %amount%" -> "crate givekey %player% gold 1";
                                 case "dc givekey %player% Amethyst %amount%" -> "crate givekey %player% amethyst 1";
                                 case "dc givekey %player% Crimson %amount%" -> "crate givekey %player% crimson 1";
+                                case "crate givekey %player% common" -> "crate givekey %player% common 1";
+                                case "crate givekey %player% prime" -> "crate givekey %player% prime 1";
+                                case "crate givekey %player% gold" -> "crate givekey %player% gold 1";
+                                case "crate givekey %player% amethyst" -> "crate givekey %player% amethyst 1";
+                                case "crate givekey %player% crimson" -> "crate givekey %player% crimson 1";
                                 case "ds give %player% pig %amount%" -> "ss give %player% give pig %amount%";
                                 case "ds give %player% cow %amount%" -> "ss give %player% give cow %amount%";
                                 case "ds give %player% zombie %amount%" -> "ss give %player% give zombie %amount%";
