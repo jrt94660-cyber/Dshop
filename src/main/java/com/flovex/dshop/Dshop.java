@@ -164,6 +164,21 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
             case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",Integer.parseInt(a[2]));y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
+            case "seticon" -> {
+                if(a.length<3){msg(p,"&c/shop seticon <category> <material>");return true;}
+                String cat=a[1].toLowerCase(Locale.ROOT);YamlConfiguration data=categories.get(cat);
+                if(data==null){msg(p,"&cCategory not found.");return true;}
+                Material material=Material.matchMaterial(a[2].toUpperCase(Locale.ROOT));
+                if(material==null||!material.isItem()){msg(p,"&cInvalid item material.");return true;}
+                data.set("category.material",material.name());saveCategory(cat);msg(p,"&aCategory icon changed to &f"+material.name()+"&a.");return true;
+            }
+            case "setname" -> {
+                if(a.length<3){msg(p,"&c/shop setname <category> <display name>");return true;}
+                String cat=a[1].toLowerCase(Locale.ROOT);YamlConfiguration data=categories.get(cat);
+                if(data==null){msg(p,"&cCategory not found.");return true;}
+                String display=String.join(" ",Arrays.copyOfRange(a,2,a.length));
+                data.set("category.display-name",display);saveCategory(cat);msg(p,"&aCategory display name updated.");return true;
+            }
             case "add","remove","price" -> {if(a.length<3){msg(p,"&c/shop "+a[0]+" <category> <page>");return true;}String cat=a[1].toLowerCase(Locale.ROOT);if(!categories.containsKey(cat)){msg(p,"&cCategory not found.");return true;}int page;try{page=Integer.parseInt(a[2]);}catch(Exception e){msg(p,"&cInvalid page.");return true;}if(a[0].equalsIgnoreCase("add")){ItemStack hand=p.getInventory().getItemInMainHand();if(hand.getType()==Material.AIR){msg(p,"&cHold an item first.");return true;}sessions.put(p.getUniqueId(),new EditSession("add",cat,page,singleItem(hand)));msg(p,"&eClick an empty slot in the category page to place the item.");}else if(a[0].equalsIgnoreCase("remove")){sessions.put(p.getUniqueId(),new EditSession("remove",cat,page));msg(p,"&eClick the item you want to remove.");}else{sessions.put(p.getUniqueId(),new EditSession("price",cat,page));msg(p,"&eClick the item, then type its price in chat. Type cancel to stop.");}p.closeInventory();openPage(p,cat,page);return true;}
             default -> msg(p,"&cUnknown command.");
         }return true;
@@ -203,6 +218,14 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             "&7Click an empty slot to add the first item to page 2.",
             "&7The page is created when that item is saved.",
             "&7Previous/Next arrows only appear when those pages exist.",
+            "",
+            "&e&lCHANGE CATEGORY ICON AND DISPLAY NAME",
+            "&f/shop seticon <category> <material>",
+            "&7Example: &f/shop seticon blocks DIAMOND",
+            "&7Changes the category button item icon.",
+            "&f/shop setname <category> <display name>",
+            "&7Example: &f/shop setname blocks &#38BDFB&lBlocks Shop",
+            "&7Supports color codes (&f& and &#RRGGBB&7).",
             "",
             "&e&lDELETE A CATEGORY",
             "&f/shop delete <category>",
@@ -305,7 +328,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
-    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
+    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","seticon","setname","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
     private static final class Purchase{final String cat,id;final int page;final ItemStack item;final double unit;int amount;Purchase(String c,int p,String i,ItemStack it,double u,int a){cat=c;page=p;id=i;item=it;unit=u;amount=a;}}
     private static final class EditSession{final String type,cat;final int page;final ItemStack item;String itemId;EditSession(String t,String c,int p){this(t,c,p,null);}EditSession(String t,String c,int p,ItemStack i){type=t;cat=c;page=p;item=i;}}
 }
