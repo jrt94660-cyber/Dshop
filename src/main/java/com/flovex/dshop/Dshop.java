@@ -471,10 +471,12 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                     while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);
                         Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}
                 }
-                purchases.remove(p.getUniqueId());msg(p,"&aPurchased &f"+b.amount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));
-                // Reopen on the next tick so Bukkit does not close the newly opened item list
-                // when it finishes processing the purchase GUI click.
-                Bukkit.getScheduler().runTask(this,()->{if(p.isOnline())openPage(p,b.cat,b.page);});
+                int purchasedAmount=b.amount;
+                b.amount=1;
+                msg(p,"&aPurchased &f"+purchasedAmount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));
+                // Keep the player in this item's purchase screen for another purchase.
+                // Re-render next tick so Bukkit finishes processing the confirm click first.
+                Bukkit.getScheduler().runTask(this,()->{if(p.isOnline()&&purchases.get(p.getUniqueId())==b)renderPurchase(p);});
             }
         }
     }
