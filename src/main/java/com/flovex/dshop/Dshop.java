@@ -73,11 +73,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                             String command=existing.getString(commandPath);
                             if(command==null)continue;
                             String replacement=switch(command){
-                                case "dc givekey %player% Common %amount%" -> "crate givekey %player% common";
-                                case "dc givekey %player% Prime %amount%" -> "crate givekey %player% prime";
-                                case "dc givekey %player% Gold %amount%" -> "crate givekey %player% gold";
-                                case "dc givekey %player% Amethyst %amount%" -> "crate givekey %player% amethyst";
-                                case "dc givekey %player% Crimson %amount%" -> "crate givekey %player% crimson";
+                                case "dc givekey %player% Common %amount%" -> "crate givekey %player% common 1";
+                                case "dc givekey %player% Prime %amount%" -> "crate givekey %player% prime 1";
+                                case "dc givekey %player% Gold %amount%" -> "crate givekey %player% gold 1";
+                                case "dc givekey %player% Amethyst %amount%" -> "crate givekey %player% amethyst 1";
+                                case "dc givekey %player% Crimson %amount%" -> "crate givekey %player% crimson 1";
                                 case "ds give %player% pig %amount%" -> "ss give %player% give pig %amount%";
                                 case "ds give %player% cow %amount%" -> "ss give %player% give cow %amount%";
                                 case "ds give %player% zombie %amount%" -> "ss give %player% give zombie %amount%";
