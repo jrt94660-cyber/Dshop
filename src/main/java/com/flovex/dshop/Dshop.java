@@ -20,6 +20,8 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,12 +42,37 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         pricesFile=new File(getDataFolder(),"prices.yml");
         if(!pricesFile.exists()) try { getDataFolder().mkdirs(); pricesFile.createNewFile(); } catch(Exception e){getLogger().severe(e.getMessage());}
         prices=YamlConfiguration.loadConfiguration(pricesFile);
+        installDefaultCategories();
         loadCategories();
         if(getCommand("shop")!=null){getCommand("shop").setExecutor(this);getCommand("shop").setTabCompleter(this);}
         Bukkit.getPluginManager().registerEvents(this,this); setupVault();
         getLogger().info("Dshop enabled.");
     }
     private void setupVault(){ if(Bukkit.getPluginManager().getPlugin("Vault")!=null){RegisteredServiceProvider<Economy> rsp=Bukkit.getServicesManager().getRegistration(Economy.class);if(rsp!=null)vault=rsp.getProvider();}}
+    private void installDefaultCategories(){
+        File dir=new File(getDataFolder(),"categories");
+        if(!dir.exists()&&!dir.mkdirs())getLogger().warning("Could not create categories directory.");
+        try(var resource=getResource("default-categories.yml")){
+            if(resource==null){getLogger().warning("Built-in category defaults were not found in the plugin jar.");return;}
+            YamlConfiguration defaults=YamlConfiguration.loadConfiguration(new InputStreamReader(resource,StandardCharsets.UTF_8));
+            ConfigurationSection root=defaults.getConfigurationSection("categories");
+            if(root==null)return;
+            for(String name:root.getKeys(false)){
+                File file=new File(dir,name.toLowerCase(Locale.ROOT)+".yml");
+                if(file.exists())continue;
+                ConfigurationSection source=root.getConfigurationSection(name);
+                if(source==null)continue;
+                YamlConfiguration target=new YamlConfiguration();
+                for(String sectionName:source.getKeys(false)){
+                    ConfigurationSection nested=source.getConfigurationSection(sectionName);
+                    if(nested==null){target.set(sectionName,source.get(sectionName));continue;}
+                    for(String path:nested.getKeys(true))target.set(sectionName+"."+path,nested.get(path));
+                }
+                target.save(file);
+                getLogger().info("Installed built-in shop category: "+name);
+            }
+        }catch(Exception ex){getLogger().severe("Could not install built-in shop categories: "+ex.getMessage());}
+    }
     private void loadCategories(){
         categories.clear(); File dir=new File(getDataFolder(),"categories"); if(!dir.exists())dir.mkdirs();
         File[] files=dir.listFiles((d,n)->n.toLowerCase(Locale.ROOT).endsWith(".yml")); if(files==null)return;
