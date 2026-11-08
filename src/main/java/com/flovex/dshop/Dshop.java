@@ -158,6 +158,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(a.length==0){openCategories(p);return true;}
         if(!p.hasPermission("dshop.admin")){msg(p,"&cYou don't have permission.");return true;}
         switch(a[0].toLowerCase(Locale.ROOT)){
+            case "edit" -> { sendEditGuide(p); return true; }
             case "reload" -> {reloadConfig();prices=YamlConfiguration.loadConfiguration(pricesFile);loadCategories();setupVault();msg(p,"&aDshop reloaded.");}
             case "create" -> {if(a.length<3){msg(p,"&c/shop create <category> <page>");return true;}String name=a[1].toLowerCase(Locale.ROOT);File f=new File(getDataFolder(),"categories/"+name+".yml");if(f.exists()){msg(p,"&cCategory already exists.");return true;}YamlConfiguration y=new YamlConfiguration();y.set("category.name",a[1]);y.set("category.display-name","&b&l"+a[1].toUpperCase(Locale.ROOT));y.set("category.description","Browse "+a[1]);y.set("category.material","CHEST");y.set("category.slot",-1);y.set("category.default-page",Integer.parseInt(a[2]));y.set("category.economy","VAULT");y.set("category.currency","shards");y.set("pages."+a[2]+".items",new LinkedHashMap<>());try{y.save(f);}catch(Exception ex){msg(p,"&cCould not save category.");return true;}loadCategories();sessions.put(p.getUniqueId(),new EditSession("category",name,Integer.parseInt(a[2])));p.closeInventory();openCategories(p);msg(p,"&eClick an empty slot in the category menu to place it.");return true;}
             case "delete" -> {if(a.length<2)return true;File f=new File(getDataFolder(),"categories/"+a[1].toLowerCase(Locale.ROOT)+".yml");if(f.delete()){categories.remove(a[1].toLowerCase(Locale.ROOT));prices.set(a[1].toLowerCase(Locale.ROOT),null);savePrices();msg(p,"&aCategory and its prices deleted.");}else msg(p,"&cCategory not found.");return true;}
@@ -165,6 +166,68 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             default -> msg(p,"&cUnknown command.");
         }return true;
     }
+    private void sendEditGuide(Player p){
+        String[] lines={
+            "&8&m------------------------------------------------",
+            "&b&lDshop &8» &fSHOP EDITING GUIDE",
+            "&7A quick guide to creating and managing your shop.",
+            "",
+            "&e&lCREATE A CATEGORY",
+            "&f/shop create <category> <page>",
+            "&7Example: &f/shop create blocks 1",
+            "&7Creates the category and its first page. Click an empty",
+            "&7slot in the category menu to choose its position.",
+            "",
+            "&e&lADD ITEMS",
+            "&7Hold the item in your main hand, then run:",
+            "&f/shop add <category> <page>",
+            "&7Example: &f/shop add blocks 1",
+            "&7Click an empty slot in that page to place it.",
+            "&7Its item name, lore, enchantments and item data are kept.",
+            "",
+            "&e&lSET OR CHANGE A PRICE",
+            "&f/shop price <category> <page>",
+            "&7Click the item, then type its price in chat.",
+            "&7Examples: &f2500000 &7or &f2.5m",
+            "&7Prices are stored in &fplugins/Dshop/prices.yml&7.",
+            "",
+            "&e&lREMOVE AN ITEM",
+            "&f/shop remove <category> <page>",
+            "&7Click the item to remove it. Its price is removed too.",
+            "",
+            "&e&lCREATE ANOTHER PAGE",
+            "&7Use the add command with a new page number:",
+            "&f/shop add blocks 2",
+            "&7Click an empty slot to add the first item to page 2.",
+            "&7The page is created when that item is saved.",
+            "&7Previous/Next arrows only appear when those pages exist.",
+            "",
+            "&e&lDELETE A CATEGORY",
+            "&f/shop delete <category>",
+            "&7Deletes the category file and all prices for that category.",
+            "",
+            "&e&lECONOMY AND CURRENCY",
+            "&7Open &fplugins/Dshop/categories/<category>.yml",
+            "&7Set &fcategory.economy&7 to VAULT, COINSENGINE or",
+            "&7EXCELENTECONOMY. Set &fcategory.currency&7 to its currency ID.",
+            "&7Currency symbols and price formatting are in &fconfig.yml&7.",
+            "",
+            "&e&lRELOAD CHANGES",
+            "&f/shop reload",
+            "&7Reloads config.yml, prices.yml and category files.",
+            "",
+            "&b&lHOW PLAYERS BUY",
+            "&7Players use &f/shop&7, open a category and click an item.",
+            "&7Choose quantity with &c-64 -10 -1 &7and &a+1 +10 +64&7.",
+            "&7Click &aConfirm&7 to buy. &cCancel &7returns to that category.",
+            "",
+            "&c&lPERMISSION",
+            "&7Editing commands require &fdshop.admin&7.",
+            "&8&m------------------------------------------------"
+        };
+        for(String line:lines) p.sendMessage(color(line));
+    }
+
     private ItemStack singleItem(ItemStack source){ItemStack copy=source.clone();copy.setAmount(1);return copy;}
     private void saveCategory(String cat){try{categories.get(cat).save(new File(getDataFolder(),"categories/"+cat+".yml"));}catch(Exception e){getLogger().warning(e.getMessage());}}
     private void savePrices(){try{prices.save(pricesFile);}catch(Exception e){getLogger().warning(e.getMessage());}}
@@ -240,7 +303,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
-    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("create","delete","add","remove","price","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
+    @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
     private static final class Purchase{final String cat,id;final int page;final ItemStack item;final double unit;int amount;Purchase(String c,int p,String i,ItemStack it,double u,int a){cat=c;page=p;id=i;item=it;unit=u;amount=a;}}
     private static final class EditSession{final String type,cat;final int page;final ItemStack item;String itemId;EditSession(String t,String c,int p){this(t,c,p,null);}EditSession(String t,String c,int p,ItemStack i){type=t;cat=c;page=p;item=i;}}
 }
