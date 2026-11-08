@@ -164,7 +164,12 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private void openPurchase(Player p,String cat,int page,String id){
         YamlConfiguration c=categories.get(cat);ItemStack stack=c.getItemStack("pages."+page+".items."+id+".item");if(stack==null)return;
         double unit=price(cat,id);if(unit<=0){msg(p,"&cThis item has no valid price.");return;}
-        Purchase purchase=new Purchase(cat,page,id,stack.clone(),unit,1);purchases.put(p.getUniqueId(),purchase);renderPurchase(p);
+        ItemStack purchaseItem=stack.clone();
+        String configuredName=c.getString("pages."+page+".items."+id+".display-name");
+        if(configuredName!=null&&!configuredName.isBlank()){
+            ItemMeta meta=purchaseItem.getItemMeta();meta.setDisplayName(color(configuredName));purchaseItem.setItemMeta(meta);
+        }
+        Purchase purchase=new Purchase(cat,page,id,purchaseItem,unit,1);purchases.put(p.getUniqueId(),purchase);renderPurchase(p);
     }
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
