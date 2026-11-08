@@ -20,5 +20,5 @@ jobs:
       - name: Upload plugin jar
         uses: actions/upload-artifact@v4
         with:
-          name: Dshop-1.0.15
-          path: target/Dshop-1.0.15.jar
+          name: Dshop-1.0.17
+          path: target/Dshop-1.0.17.jar
