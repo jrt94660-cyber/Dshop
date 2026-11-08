@@ -66,7 +66,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 for(String sectionName:source.getKeys(false)){
                     ConfigurationSection nested=source.getConfigurationSection(sectionName);
                     if(nested==null){target.set(sectionName,source.get(sectionName));continue;}
-                    for(String path:nested.getKeys(true))target.set(sectionName+"."+path,nested.get(path));
+                    for(String path:nested.getKeys(true))if(!nested.isConfigurationSection(path))target.set(sectionName+"."+path,nested.get(path));
                 }
                 target.save(file);
                 getLogger().info("Installed built-in shop category: "+name);
