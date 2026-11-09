@@ -21,4 +21,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dshop-1.0.26
-          path: target/Dshop-1.0.25.jar
+          path: target/Dshop-1.0.26.jar
