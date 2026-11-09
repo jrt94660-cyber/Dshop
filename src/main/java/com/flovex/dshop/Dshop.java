@@ -574,7 +574,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                         Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}
                 }
                 int purchasedAmount=b.amount;
-                b.amount=1;
+                // Preserve the selected quantity for the next purchase of this item.
                 msg(p,"&aPurchased &f"+purchasedAmount+"x &a"+b.item.getType().name()+" for &f"+formatPrice(total,b.cat));
                 // Keep the player in this item's purchase screen for another purchase.
                 // Re-render next tick so Bukkit finishes processing the confirm click first.
