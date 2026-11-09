@@ -4,8 +4,8 @@ currency:
   symbols:
     VAULT: "$"
     COINSENGINE:
-      shards: "✦"
-      default: "✦"
+      shards: "&#E43A96✦"
+      default: "&#E43A96✦"
     EXCELENTECONOMY:
       shards: "✦"
       default: "✦"
