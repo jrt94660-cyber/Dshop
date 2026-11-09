@@ -92,7 +92,7 @@ categories:
   shards:
     category:
       name: Shards
-      display-name: "&#0bf592sʜᴀʀᴅs"
+      display-name: "&#E43A96sʜᴀʀᴅs"
       description: "Crate keys and mob spawners."
       material: AMETHYST_SHARD
       slot: 15
@@ -107,12 +107,12 @@ categories:
           gold-key: {slot: 4, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#e3b900ɢᴏʟᴅ ᴋᴇʏ", price: 1500, command: "crate givekey %player% gold 1"}
           amethyst-key: {slot: 5, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#9966CCᴀᴍᴇᴛʜʏꜱᴛ ᴋᴇʏ", price: 4000, command: "crate givekey %player% amethyst 1"}
           crimson-key: {slot: 6, material: TRIPWIRE_HOOK, amount: 1, item-name: "&#c42119ᴄʀɪᴍꜱᴏɴ ᴋᴇʏ", price: 2000, command: "crate givekey %player% crimson 1"}
-          pig-spawner: {slot: 9, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&ePig"], price: 250, command: "ss give %player% give pig %amount%"}
-          cow-spawner: {slot: 10, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCow"], price: 350, command: "ss give %player% give cow %amount%"}
-          zombie-spawner: {slot: 11, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombie"], price: 400, command: "ss give %player% give zombie %amount%"}
-          spider-spawner: {slot: 12, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSpider"], price: 750, command: "ss give %player% give spider %amount%"}
-          skeleton-spawner: {slot: 13, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSkeleton"], price: 500, command: "ss give %player% give skeleton %amount%"}
-          creeper-spawner: {slot: 14, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCreeper"], price: 625, command: "ss give %player% give creeper %amount%"}
-          zombified-piglin-spawner: {slot: 15, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombified Piglin"], price: 750, command: "ss give %player% give zombie_piglin %amount%"}
-          blaze-spawner: {slot: 16, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eBlaze"], price: 1000, command: "ss give %player% give blaze %amount%"}
-          iron-golem-spawner: {slot: 17, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eIron Golem"], price: 1500, command: "ss give %player% give iron_golem %amount%"}
+          pig-spawner: {slot: 9, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&ePig"], price: 250, command: "ss give %player% pig %amount%"}
+          cow-spawner: {slot: 10, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCow"], price: 350, command: "ss give %player% cow %amount%"}
+          zombie-spawner: {slot: 11, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombie"], price: 400, command: "ss give %player% zombie %amount%"}
+          spider-spawner: {slot: 12, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSpider"], price: 750, command: "ss give %player% spider %amount%"}
+          skeleton-spawner: {slot: 13, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eSkeleton"], price: 500, command: "ss give %player% skeleton %amount%"}
+          creeper-spawner: {slot: 14, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eCreeper"], price: 625, command: "ss give %player% creeper %amount%"}
+          zombified-piglin-spawner: {slot: 15, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eZombified Piglin"], price: 750, command: "ss give %player% zombie_piglin %amount%"}
+          blaze-spawner: {slot: 16, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eBlaze"], price: 1000, command: "ss give %player% blaze %amount%"}
+          iron-golem-spawner: {slot: 17, material: SPAWNER, amount: 1, item-name: "&dSpawner", lore: ["&eIron Golem"], price: 1500, command: "ss give %player% iron_golem %amount%"}
