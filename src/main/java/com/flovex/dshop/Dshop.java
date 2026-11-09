@@ -137,9 +137,19 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(item!=null)meta.getPersistentDataContainer().set(itemKey,PersistentDataType.STRING,item);
         it.setItemMeta(meta);return it;
     }
+    private Inventory createShopInventory(int size,String title){
+        ShopHolder holder=new ShopHolder();
+        Inventory inventory=Bukkit.createInventory(holder,size,title);
+        holder.inventory=inventory;
+        return inventory;
+    }
+    private static final class ShopHolder implements InventoryHolder {
+        private Inventory inventory;
+        @Override public Inventory getInventory(){return inventory;}
+    }
     private void openCategories(Player p){
         int rows=3;
-        Inventory inv=Bukkit.createInventory(p,rows*9,color(getConfig().getString("gui.categories-title","&8Shop | Categories")));
+        Inventory inv=createShopInventory(rows*9,color(getConfig().getString("gui.categories-title","&8Shop | Categories")));
         for(var en:categories.entrySet()){
             YamlConfiguration c=en.getValue(); int slot=c.getInt("category.slot",-1); if(slot<0||slot>=inv.getSize())continue;
             String display=c.getString("category.display-name","&b"+en.getKey().toUpperCase(Locale.ROOT));
@@ -152,7 +162,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private void openPage(Player p,String cat,int page){
         YamlConfiguration c=categories.get(cat);if(c==null){msg(p,"&cCategory not found.");return;}
         int rows=3;
-        Inventory inv=Bukkit.createInventory(p,rows*9,color(getConfig().getString("gui.page-title","&8{category} | Page {page}").replace("{category}",c.getString("category.name",cat)).replace("{page}",String.valueOf(page))));
+        Inventory inv=createShopInventory(rows*9,color(getConfig().getString("gui.page-title","&8{category} | Page {page}").replace("{category}",c.getString("category.name",cat)).replace("{page}",String.valueOf(page))));
         ConfigurationSection section=c.getConfigurationSection("pages."+page+".items");
         if(section!=null)for(String key:section.getKeys(false)){
             int slot=section.getInt(key+".slot",-1);if(slot<0||slot>=inv.getSize())continue;
@@ -197,7 +207,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 .toList();
         int pageCount=Math.max(1,(materials.size()+44)/45);
         session.page=Math.max(0,Math.min(session.page,pageCount-1));
-        Inventory inv=Bukkit.createInventory(p,54,color("&8Choose Category Icon"));
+        Inventory inv=createShopInventory(54,color("&8Choose Category Icon"));
         int start=session.page*45;
         for(int i=0;i<45&&start+i<materials.size();i++){
             Material material=materials.get(start+i);
@@ -287,7 +297,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
-        Inventory inv=Bukkit.createInventory(p,27,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
+        Inventory inv=createShopInventory(27,color(getConfig().getString("gui.purchase-title","&8Confirm Purchase")));
         ItemStack preview=b.item.clone();
         preview.setAmount(Math.min(b.amount,preview.getMaxStackSize()));
         inv.setItem(13,preview);
@@ -476,6 +486,13 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private void savePrices(){try{prices.save(pricesFile);}catch(Exception e){getLogger().warning(e.getMessage());}}
     @EventHandler public void onClick(InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player p))return;
+        boolean shopView=e.getView().getTopInventory().getHolder() instanceof ShopHolder;
+        if(shopView){
+            // Block shift-clicks, number-key swaps, Q-drops, double-click collection,
+            // and all other inventory actions while any Dshop menu is open.
+            e.setCancelled(true);
+            if(e.getClickedInventory()!=e.getView().getTopInventory())return;
+        }
         ItemStack clicked=e.getCurrentItem();
         String action=clicked!=null&&clicked.hasItemMeta()?clicked.getItemMeta().getPersistentDataContainer().get(actionKey,PersistentDataType.STRING):null;
         IconSession iconSession=iconSessions.get(p.getUniqueId());
@@ -567,95 +584,112 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private boolean withdraw(Player p,String cat,double amount){
         YamlConfiguration category=categories.get(cat);
-        String provider=category.getString("category.economy","VAULT").toUpperCase(Locale.ROOT);
-        String currency=category.getString("category.currency","shards");
+        if(category==null||!Double.isFinite(amount)||amount<=0)return false;
+        String provider=category.getString("category.economy","VAULT").replaceAll("[^A-Za-z]","").toUpperCase(Locale.ROOT);
+        String currency=category.getString("category.currency","").trim();
         try {
-            if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
-            if(provider.equals("COINSENGINE")){
-                // CoinsEngine's Player overload returns void. Prefer the UUID overload,
-                // which returns a boolean, and only use the Player overload as a fallback.
-                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")==null
-                        &&Bukkit.getPluginManager().getPlugin("ExcellentEconomy")==null)return false;
-                Class<?> api=Class.forName("su.nightexpress.coinsengine.api.CoinsEngineAPI");
-                Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
-                if(currencyObject==null){
-                    getLogger().warning("CoinsEngine currency '"+currency+"' was not found. Check category.currency in the category YAML.");
-                    return false;
+            if(provider.equals("VAULT"))
+                return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
+
+            if(provider.equals("EXCELLECONOMY")||provider.equals("EXCELLENTECONOMY")
+                    ||provider.equals("COINSENGINE")){
+                // ExcellentEconomy 2.8+ replaced CoinsEngine and exposes its current
+                // synchronous API through Bukkit's ServicesManager.
+                if(Bukkit.getPluginManager().getPlugin("ExcellentEconomy")!=null){
+                    if(withdrawExcellentEconomy(p,currency,amount))return true;
+                    if(!provider.equals("COINSENGINE"))return false;
                 }
-                double balance=-1;
-                for(var method:api.getMethods()){
-                    if(!method.getName().equals("getBalance")||method.getParameterCount()!=2)continue;
-                    Class<?>[] types=method.getParameterTypes();
-                    if(types[0]==Player.class&&types[1].isInstance(currencyObject)){
-                        Object value=method.invoke(null,p,currencyObject);
-                        if(value instanceof Number number)balance=number.doubleValue();
-                        break;
-                    }
-                }
-                if(balance>=0&&balance<amount)return false;
-                for(var method:api.getMethods()){
-                    if(!method.getName().equals("removeBalance")||method.getParameterCount()!=3)continue;
-                    Class<?>[] types=method.getParameterTypes();
-                    if(types[0]==UUID.class&&types[1].isInstance(currencyObject)
-                            &&(types[2]==double.class||types[2]==Double.class)){
-                        Object result=method.invoke(null,p.getUniqueId(),currencyObject,amount);
-                        return result instanceof Boolean success&&success;
-                    }
-                }
-                // Compatibility fallback for API builds exposing only the void Player overload.
-                if(balance>=amount){
-                    for(var method:api.getMethods()){
-                        if(!method.getName().equals("removeBalance")||method.getParameterCount()!=3)continue;
-                        Class<?>[] types=method.getParameterTypes();
-                        if(types[0]==Player.class&&types[1].isInstance(currencyObject)
-                                &&(types[2]==double.class||types[2]==Double.class)){
-                            method.invoke(null,p,currencyObject,amount);
-                            return true;
-                        }
-                    }
-                }
-                getLogger().warning("No compatible CoinsEngine removeBalance API method was found.");
+                // Legacy CoinsEngine support (pre-2.8).
+                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")!=null)
+                    return withdrawLegacyCoinsEngine(p,currency,amount);
+                getLogger().warning("The configured economy provider '"+provider+"' is not installed or has no registered API.");
                 return false;
             }
-            if(provider.equals("EXCELENTECONOMY")||provider.equals("EXCELLENTEconomy".toUpperCase(Locale.ROOT))){
-                // ExcellentEconomy 2.8+ exposes its API through Bukkit's ServicesManager.
-                // Match the documented cached overloads by their exact argument types;
-                // blindly invoking the first three-argument overload can pass a String
-                // where ExcellentCurrency is expected and causes IllegalArgumentException.
-                Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
-                RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(api);
-                if(registration==null)return false;
-                Object instance=registration.getProvider();
-                try {
-                    Object result=api.getMethod("withdraw",Player.class,String.class,double.class)
-                            .invoke(instance,p,currency,amount);
-                    return Boolean.TRUE.equals(result);
-                } catch(NoSuchMethodException ignored) {
-                    // Older/API variants may expose only the ExcellentCurrency overload.
-                }
-                Object currencyObject=null;
-                try {
-                    currencyObject=api.getMethod("getCurrency",String.class).invoke(instance,currency);
-                } catch(NoSuchMethodException ignored) {
-                    // Fall through to a compatible currency lookup if this API variant differs.
-                }
-                if(currencyObject==null)return false;
-                for(var method:api.getMethods()){
-                    if(!method.getName().equals("withdraw")||method.getParameterCount()!=3)continue;
-                    Class<?>[] types=method.getParameterTypes();
-                    if(types[0].isAssignableFrom(Player.class)
-                            &&types[1].isInstance(currencyObject)
-                            &&(types[2]==double.class||types[2]==Double.class)){
-                        Object result=method.invoke(instance,p,currencyObject,amount);
-                        return Boolean.TRUE.equals(result);
-                    }
-                }
-                getLogger().warning("No compatible ExcellentEconomy withdraw(Player, currency, double) method was found.");
-                return false;
-            }
+            getLogger().warning("Unknown economy provider '"+provider+"' in category '"+cat+"'.");
         } catch(Exception ex) {
             getLogger().warning("Economy withdrawal failed for "+provider+": "+ex.getClass().getSimpleName()+" - "+ex.getMessage());
         }
+        return false;
+    }
+    private boolean withdrawExcellentEconomy(Player p,String currency,double amount) throws Exception {
+        if(currency.isBlank()){
+            getLogger().warning("ExcellentEconomy category is missing category.currency.");
+            return false;
+        }
+        Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
+        RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(api);
+        if(registration==null){
+            getLogger().warning("ExcellentEconomy API service is not registered.");
+            return false;
+        }
+        Object instance=registration.getProvider();
+        // Official ExcellentEconomy API: cached balance and withdrawal by currency ID.
+        try{
+            Object value=api.getMethod("getBalance",Player.class,String.class).invoke(instance,p,currency);
+            if(!(value instanceof Number balance)||balance.doubleValue()<amount)return false;
+            Object result=api.getMethod("withdraw",Player.class,String.class,double.class)
+                    .invoke(instance,p,currency,amount);
+            return Boolean.TRUE.equals(result);
+        }catch(NoSuchMethodException ignored){
+            // Compatibility with API variants exposing an ExcellentCurrency object.
+        }
+        Object currencyObject=api.getMethod("getCurrency",String.class).invoke(instance,currency);
+        if(currencyObject==null){
+            getLogger().warning("ExcellentEconomy currency '"+currency+"' was not found.");
+            return false;
+        }
+        Object value=api.getMethod("getBalance",Player.class,currencyObject.getClass().getInterfaces().length>0
+                ? currencyObject.getClass().getInterfaces()[0] : currencyObject.getClass()).invoke(instance,p,currencyObject);
+        if(!(value instanceof Number balance)||balance.doubleValue()<amount)return false;
+        for(var method:api.getMethods()){
+            if(!method.getName().equals("withdraw")||method.getParameterCount()!=3)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(types[0]==Player.class&&types[1].isInstance(currencyObject)
+                    &&(types[2]==double.class||types[2]==Double.class)){
+                return Boolean.TRUE.equals(method.invoke(instance,p,currencyObject,amount));
+            }
+        }
+        getLogger().warning("No compatible ExcellentEconomy withdraw method was found.");
+        return false;
+    }
+    private boolean withdrawLegacyCoinsEngine(Player p,String currency,double amount) throws Exception {
+        if(currency.isBlank()){
+            getLogger().warning("CoinsEngine category is missing category.currency.");
+            return false;
+        }
+        Class<?> api=Class.forName("su.nightexpress.coinsengine.api.CoinsEngineAPI");
+        Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
+        if(currencyObject==null){
+            getLogger().warning("CoinsEngine currency '"+currency+"' was not found.");
+            return false;
+        }
+        double balance=-1;
+        for(var method:api.getMethods()){
+            if(!method.getName().equals("getBalance")||method.getParameterCount()!=2)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(types[0]==Player.class&&types[1].isInstance(currencyObject)){
+                Object value=method.invoke(null,p,currencyObject);
+                if(value instanceof Number number)balance=number.doubleValue();
+                break;
+            }
+        }
+        if(balance<amount){
+            if(balance>=0)return false;
+            getLogger().warning("Could not read the CoinsEngine balance; refusing purchase.");
+            return false;
+        }
+        // Legacy UUID overload returns a success flag. Never use the void Player
+        // overload here because it cannot confirm whether the withdrawal succeeded.
+        for(var method:api.getMethods()){
+            if(!method.getName().equals("removeBalance")||method.getParameterCount()!=3)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(types[0]==UUID.class&&types[1].isInstance(currencyObject)
+                    &&(types[2]==double.class||types[2]==Double.class)){
+                Object result=method.invoke(null,p.getUniqueId(),currencyObject,amount);
+                return Boolean.TRUE.equals(result);
+            }
+        }
+        getLogger().warning("No success-reporting CoinsEngine removeBalance method was found.");
         return false;
     }
     @EventHandler public void onChat(AsyncPlayerChatEvent e){
@@ -700,7 +734,13 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         });
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
-    @EventHandler public void onInventoryDrag(InventoryDragEvent e){if(sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);}
+    @EventHandler public void onInventoryDrag(InventoryDragEvent e){
+        if(e.getView().getTopInventory().getHolder() instanceof ShopHolder
+                ||sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);
+    }
+    @EventHandler public void onPlayerDrop(org.bukkit.event.player.PlayerDropItemEvent e){
+        if(e.getPlayer().getOpenInventory().getTopInventory().getHolder() instanceof ShopHolder)e.setCancelled(true);
+    }
     @Override public List<String> onTabComplete(CommandSender s,Command c,String a,String[] args){if(args.length==1)return List.of("edit","create","delete","add","remove","price","name","command","seticon","setname","reload");if(args.length==2)return new ArrayList<>(categories.keySet());return List.of();}
     private static final class IconSession{
         final String category;int page;String query="";boolean awaitingSearch;
