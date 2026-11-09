@@ -638,9 +638,17 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             getLogger().warning("ExcellentEconomy currency '"+currency+"' was not found.");
             return false;
         }
-        Object value=api.getMethod("getBalance",Player.class,currencyObject.getClass().getInterfaces().length>0
-                ? currencyObject.getClass().getInterfaces()[0] : currencyObject.getClass()).invoke(instance,p,currencyObject);
-        if(!(value instanceof Number balance)||balance.doubleValue()<amount)return false;
+        double balance=-1;
+        for(var method:api.getMethods()){
+            if(!method.getName().equals("getBalance")||method.getParameterCount()!=2)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(types[0]==Player.class&&types[1].isInstance(currencyObject)){
+                Object value=method.invoke(instance,p,currencyObject);
+                if(value instanceof Number number)balance=number.doubleValue();
+                break;
+            }
+        }
+        if(balance<amount)return false;
         for(var method:api.getMethods()){
             if(!method.getName().equals("withdraw")||method.getParameterCount()!=3)continue;
             Class<?>[] types=method.getParameterTypes();
