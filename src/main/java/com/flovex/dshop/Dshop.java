@@ -84,15 +84,24 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                                 case "crate givekey %player% gold" -> "crate givekey %player% gold 1";
                                 case "crate givekey %player% amethyst" -> "crate givekey %player% amethyst 1";
                                 case "crate givekey %player% crimson" -> "crate givekey %player% crimson 1";
-                                case "ds give %player% pig %amount%" -> "ss give %player% give pig %amount%";
-                                case "ds give %player% cow %amount%" -> "ss give %player% give cow %amount%";
-                                case "ds give %player% zombie %amount%" -> "ss give %player% give zombie %amount%";
-                                case "ds give %player% spider %amount%" -> "ss give %player% give spider %amount%";
-                                case "ds give %player% skeleton %amount%" -> "ss give %player% give skeleton %amount%";
-                                case "ds give %player% creeper %amount%" -> "ss give %player% give creeper %amount%";
-                                case "ds give %player% zombie_piglin %amount%" -> "ss give %player% give zombie_piglin %amount%";
-                                case "ds give %player% blaze %amount%" -> "ss give %player% give blaze %amount%";
-                                case "ds give %player% iron_golem %amount%" -> "ss give %player% give iron_golem %amount%";
+                                case "ds give %player% pig %amount%" -> "ss give %player% pig %amount%";
+                                case "ds give %player% cow %amount%" -> "ss give %player% cow %amount%";
+                                case "ds give %player% zombie %amount%" -> "ss give %player% zombie %amount%";
+                                case "ds give %player% spider %amount%" -> "ss give %player% spider %amount%";
+                                case "ds give %player% skeleton %amount%" -> "ss give %player% skeleton %amount%";
+                                case "ds give %player% creeper %amount%" -> "ss give %player% creeper %amount%";
+                                case "ds give %player% zombie_piglin %amount%" -> "ss give %player% zombie_piglin %amount%";
+                                case "ds give %player% blaze %amount%" -> "ss give %player% blaze %amount%";
+                                case "ds give %player% iron_golem %amount%" -> "ss give %player% iron_golem %amount%";
+                                case "ss give %player% give pig %amount%" -> "ss give %player% pig %amount%";
+                                case "ss give %player% give cow %amount%" -> "ss give %player% cow %amount%";
+                                case "ss give %player% give zombie %amount%" -> "ss give %player% zombie %amount%";
+                                case "ss give %player% give spider %amount%" -> "ss give %player% spider %amount%";
+                                case "ss give %player% give skeleton %amount%" -> "ss give %player% skeleton %amount%";
+                                case "ss give %player% give creeper %amount%" -> "ss give %player% creeper %amount%";
+                                case "ss give %player% give zombie_piglin %amount%" -> "ss give %player% zombie_piglin %amount%";
+                                case "ss give %player% give blaze %amount%" -> "ss give %player% blaze %amount%";
+                                case "ss give %player% give iron_golem %amount%" -> "ss give %player% iron_golem %amount%";
                                 default -> null;
                             };
                             if(replacement!=null){existing.set(commandPath,replacement);changed=true;}
@@ -304,7 +313,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         // Quantity is limited to one inventory stack. Non-stackable items (for example, totems)
         // do not show quantity controls; 16-stack items (for example, ender pearls) cap at 16.
         int maxStack = b.item.getMaxStackSize();
-        if (maxStack > 1) {
+        YamlConfiguration itemCategory=categories.get(b.cat);
+        String purchaseCommand=itemCategory==null?"":itemCategory.getString("pages."+b.page+".items."+b.id+".command","");
+        // Crate keys are sold one at a time; quantity controls are only for stackable goods/spawners.
+        boolean fixedQuantity=purchaseCommand!=null&&purchaseCommand.trim().toLowerCase(Locale.ROOT).startsWith("crate givekey ");
+        if (maxStack > 1 && !fixedQuantity) {
             if (maxStack >= 10) {
                 inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
                 inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
@@ -560,15 +573,19 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
                 double total=b.unit*b.amount;
                 if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
-                if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
                 YamlConfiguration category=categories.get(b.cat);
                 String command=category.getString("pages."+b.page+".items."+b.id+".command",category.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
                 if(command!=null&&!command.isBlank()){
+                    // Check the balance first, then execute the reward command, and only charge
+                    // after Bukkit confirms that the command was handled.
+                    if(!hasFunds(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
                     String parsed=command.replace("%player%",p.getName()).replace("%amount%",String.valueOf(b.amount))
                             .replace("%quantity%",String.valueOf(b.amount)).replace("%item%",b.item.getType().name());
                     boolean executed=Bukkit.dispatchCommand(Bukkit.getConsoleSender(),parsed);
-                    if(!executed)getLogger().warning("Purchase command returned false for item "+b.id+": "+parsed);
+                    if(!executed){getLogger().warning("Purchase command returned false for item "+b.id+": "+parsed);msg(p,"&cThe reward command failed. You were not charged.");return;}
+                    if(!withdraw(p,cat,total)){msg(p,"&cThe reward command ran, but payment failed. Please contact an administrator.");return;}
                 }else{
+                    if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
                     int remaining=b.amount;
                     while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);
                         Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}
@@ -581,6 +598,40 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 Bukkit.getScheduler().runTask(this,()->{if(p.isOnline()&&purchases.get(p.getUniqueId())==b)renderPurchase(p);});
             }
         }
+    }
+    private boolean hasFunds(Player p,String cat,double amount){
+        YamlConfiguration category=categories.get(cat);
+        if(category==null||!Double.isFinite(amount)||amount<=0)return false;
+        String provider=category.getString("category.economy","VAULT").replaceAll("[^A-Za-z]","").toUpperCase(Locale.ROOT);
+        String currency=category.getString("category.currency","").trim();
+        try{
+            if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount);
+            if(provider.equals("EXCELLECONOMY")||provider.equals("EXCELLENTECONOMY")||provider.equals("COINSENGINE")){
+                if(Bukkit.getPluginManager().getPlugin("ExcellentEconomy")!=null){
+                    Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
+                    RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(api);
+                    if(registration!=null){
+                        Object instance=registration.getProvider();
+                        try{
+                            Object value=api.getMethod("getBalance",Player.class,String.class).invoke(instance,p,currency);
+                            if(value instanceof Number n)return n.doubleValue()>=amount;
+                        }catch(NoSuchMethodException ignored){}
+                        Object currencyObject=api.getMethod("getCurrency",String.class).invoke(instance,currency);
+                        if(currencyObject!=null)for(var m:api.getMethods())if(m.getName().equals("getBalance")&&m.getParameterCount()==2&&m.getParameterTypes()[0]==Player.class&&m.getParameterTypes()[1].isInstance(currencyObject)){
+                            Object value=m.invoke(instance,p,currencyObject);return value instanceof Number n&&n.doubleValue()>=amount;
+                        }
+                    }
+                }
+                if(Bukkit.getPluginManager().getPlugin("CoinsEngine")!=null){
+                    Class<?> api=Class.forName("su.nightexpress.coinsengine.api.CoinsEngineAPI");
+                    Object currencyObject=api.getMethod("getCurrency",String.class).invoke(null,currency);
+                    if(currencyObject!=null)for(var m:api.getMethods())if(m.getName().equals("getBalance")&&m.getParameterCount()==2&&m.getParameterTypes()[0]==Player.class&&m.getParameterTypes()[1].isInstance(currencyObject)){
+                        Object value=m.invoke(null,p,currencyObject);return value instanceof Number n&&n.doubleValue()>=amount;
+                    }
+                }
+            }
+        }catch(Exception ex){getLogger().warning("Could not check funds before command reward: "+ex.getMessage());}
+        return false;
     }
     private boolean withdraw(Player p,String cat,double amount){
         YamlConfiguration category=categories.get(cat);
