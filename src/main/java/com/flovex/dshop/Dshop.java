@@ -65,6 +65,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                     // Any custom command configured by the server owner is left untouched.
                     YamlConfiguration existing=YamlConfiguration.loadConfiguration(file);
                     boolean changed=false;
+                    if(name.equalsIgnoreCase("shards")&&!existing.getString("category.display-name","").equals("&#E43A96sʜᴀʀᴅs")){
+                        existing.set("category.display-name","&#E43A96sʜᴀʀᴅs");changed=true;
+                    }
                     ConfigurationSection existingPages=existing.getConfigurationSection("pages");
                     if(existingPages!=null)for(String page:existingPages.getKeys(false)){
                         ConfigurationSection existingItems=existing.getConfigurationSection("pages."+page+".items");
@@ -285,6 +288,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String currency=data==null?"":data.getString("category.currency","");
         String symbol=getConfig().getString("currency.symbols."+provider+"."+currency,
                 getConfig().getString("currency.symbols."+provider,getConfig().getString("currency.symbol","$")));
+        if((provider.equals("COINSENGINE")||provider.equals("EXCELLECONOMY")||provider.equals("EXCELLENTECONOMY"))
+                &&currency.equalsIgnoreCase("shards"))symbol="&#E43A96✦";
         if(getConfig().getBoolean("price-format.enabled",true)){
             List<String> suffixes=getConfig().getStringList("price-format.suffixes");
             if(suffixes.isEmpty())suffixes=List.of("k","m","b","t","q","qq");
