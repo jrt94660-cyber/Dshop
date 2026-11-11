@@ -10,8 +10,10 @@ category:
 pages:
   '1':
     items:
-      sea-pickle: {slot: 10, material: SEA_PICKLE, amount: 1, item-name: "&fSea Pickle", price: 150}
-      kelp: {slot: 11, material: KELP, amount: 1, item-name: "&fKelp", price: 100}
-      bamboo: {slot: 12, material: BAMBOO, amount: 1, item-name: "&fBamboo", price: 100}
-      sugar-cane: {slot: 13, material: SUGAR_CANE, amount: 1, item-name: "&fSugar Cane", price: 125}
-      water-bucket: {slot: 14, material: WATER_BUCKET, amount: 1, item-name: "&bWater Bucket", price: 250}
+      sea-pickle: {slot: 10, material: SEA_PICKLE, amount: 1, item-name: "&fSea Pickle", price: 800}
+      bamboo: {slot: 11, material: BAMBOO, amount: 1, item-name: "&fBamboo", price: 300}
+      kelp: {slot: 12, material: KELP, amount: 1, item-name: "&fKelp", price: 400}
+      dried-kelp: {slot: 13, material: DRIED_KELP, amount: 1, item-name: "&fDried Kelp", price: 500}
+      dried-kelp-block: {slot: 14, material: DRIED_KELP_BLOCK, amount: 1, item-name: "&fDried Kelp Block", price: 700}
+      sugar-cane: {slot: 15, material: SUGAR_CANE, amount: 1, item-name: "&fSugar Cane", price: 600}
+      water-bucket: {slot: 16, material: WATER_BUCKET, amount: 1, item-name: "&bWater Bucket", price: 250}
