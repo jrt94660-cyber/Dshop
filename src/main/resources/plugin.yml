@@ -1,9 +1,12 @@
 name: Dshop
-version: 1.0.33
+version: 1.0.34
 main: com.flovex.dshop.Dshop
 api-version: '1.21'
 softdepend: [Vault, CoinsEngine, ExcellentEconomy]
 commands:
+  sell:
+    description: Opens Dshop's built-in sell menu
+    usage: /sell [top|worth|reload]
   shardshop:
     description: Opens the Shards shop directly
     usage: /shardshop
