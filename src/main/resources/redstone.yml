@@ -1,0 +1,371 @@
+category:
+  name: redstone
+  display-name: '&b&lREDSTONE'
+  description: Redstone components and automation blocks.
+  material: REDSTONE
+  slot: 22
+  default-page: 1
+  economy: VAULT
+  currency: ''
+pages:
+  '1':
+    items:
+      7aae4ddf:
+        slot: 9
+        material: REDSTONE
+        amount: 1
+        price: 400
+      685f9749:
+        slot: 10
+        material: REDSTONE_TORCH
+        amount: 1
+        price: 440
+      8f663b9a:
+        slot: 11
+        material: REPEATER
+        amount: 1
+        price: 540
+      914965d3:
+        slot: 12
+        material: COMPARATOR
+        amount: 1
+        price: 550
+      eca4529c:
+        slot: 13
+        material: TARGET
+        amount: 1
+        price: 560
+      639a2920:
+        slot: 14
+        material: WAXED_COPPER_BULB
+        amount: 1
+        price: 570
+      eb62a7c8:
+        slot: 15
+        material: WAXED_EXPOSED_COPPER_BULB
+        amount: 1
+        price: 570
+      6f1d3050:
+        slot: 16
+        material: WAXED_WEATHERED_COPPER_BULB
+        amount: 1
+        price: 570
+      47d081f7:
+        slot: 17
+        material: WAXED_OXIDIZED_COPPER_BULB
+        amount: 1
+        price: 570
+  '2':
+    items:
+      d44de6f0:
+        slot: 9
+        material: LEVER
+        amount: 1
+        price: 470
+      f3b5c843:
+        slot: 10
+        material: OAK_BUTTON
+        amount: 1
+        price: 440
+      3df01a94:
+        slot: 11
+        material: STONE_BUTTON
+        amount: 1
+        price: 440
+      8d72c2bd:
+        slot: 12
+        material: OAK_PRESSURE_PLATE
+        amount: 1
+        price: 530
+      e260f58c:
+        slot: 13
+        material: STONE_PRESSURE_PLATE
+        amount: 1
+        price: 530
+      d8a9060d:
+        slot: 14
+        material: LIGHT_WEIGHTED_PRESSURE_PLATE
+        amount: 1
+        price: 530
+      6bc1913b:
+        slot: 15
+        material: HEAVY_WEIGHTED_PRESSURE_PLATE
+        amount: 1
+        price: 530
+      e75eb19f:
+        slot: 16
+        material: SCULK_SENSOR
+        amount: 1
+        price: 650
+      504ac583:
+        slot: 17
+        material: CALIBRATED_SCULK_SENSOR
+        amount: 1
+        price: 650
+  '3':
+    items:
+      edc452ca:
+        slot: 9
+        material: SCULK_SHRIEKER
+        amount: 1
+        price: 650
+      c9df4126:
+        slot: 10
+        material: AMETHYST_BLOCK
+        amount: 1
+        price: 590
+      6cb4c8e8:
+        slot: 11
+        material: WHITE_WOOL
+        amount: 1
+        price: 510
+      3f43561c:
+        slot: 12
+        material: TRIPWIRE_HOOK
+        amount: 1
+        price: 520
+      8c2e3898:
+        slot: 13
+        material: STRING
+        amount: 1
+        price: 440
+      0936c1d2:
+        slot: 14
+        material: LECTERN
+        amount: 1
+        price: 510
+      bd369c0c:
+        slot: 15
+        material: DAYLIGHT_DETECTOR
+        amount: 1
+        price: 590
+      ebb17e23:
+        slot: 16
+        material: WAXED_LIGHTNING_ROD
+        amount: 1
+        price: 660
+      555ff964:
+        slot: 17
+        material: PISTON
+        amount: 1
+        price: 800
+  '4':
+    items:
+      d767d271:
+        slot: 9
+        material: STICKY_PISTON
+        amount: 1
+        price: 700
+      43bc88ac:
+        slot: 10
+        material: SLIME_BLOCK
+        amount: 1
+        price: 700
+      '71407846':
+        slot: 11
+        material: HONEY_BLOCK
+        amount: 1
+        price: 700
+      d0d35c10:
+        slot: 12
+        material: DISPENSER
+        amount: 1
+        price: 700
+      a6f5498e:
+        slot: 13
+        material: DROPPER
+        amount: 1
+        price: 700
+      c98b2c73:
+        slot: 14
+        material: CRAFTER
+        amount: 1
+        price: 700
+      13b49ee2:
+        slot: 15
+        material: HOPPER
+        amount: 1
+        price: 700
+      64d50abd:
+        slot: 16
+        material: CHEST
+        amount: 1
+        price: 700
+      3dbecc3c:
+        slot: 17
+        material: WAXED_COPPER_CHEST
+        amount: 1
+        price: 700
+  '5':
+    items:
+      6509fb16:
+        slot: 9
+        material: BARREL
+        amount: 1
+        price: 700
+      128ce264:
+        slot: 10
+        material: CHISELED_BOOKSHELF
+        amount: 1
+        price: 700
+      6e142d29:
+        slot: 11
+        material: OAK_SHELF
+        amount: 1
+        price: 700
+      b7291da4:
+        slot: 12
+        material: FURNACE
+        amount: 1
+        price: 700
+      ea268d7d:
+        slot: 13
+        material: TRAPPED_CHEST
+        amount: 1
+        price: 700
+      65b4f5c6:
+        slot: 14
+        material: JUKEBOX
+        amount: 1
+        price: 700
+      f97bbb92:
+        slot: 15
+        material: DECORATED_POT
+        amount: 1
+        price: 700
+      bce0881c:
+        slot: 16
+        material: OBSERVER
+        amount: 1
+        price: 700
+      a0da6878:
+        slot: 17
+        material: NOTE_BLOCK
+        amount: 1
+        price: 700
+  '6':
+    items:
+      82f5eb07:
+        slot: 9
+        material: COMPOSTER
+        amount: 1
+        price: 700
+      651dc9cb:
+        slot: 10
+        material: CAULDRON
+        amount: 1
+        price: 700
+      625ed84a:
+        slot: 11
+        material: RAIL
+        amount: 1
+        price: 700
+      b86a99d0:
+        slot: 12
+        material: POWERED_RAIL
+        amount: 1
+        price: 700
+      83180ac6:
+        slot: 13
+        material: DETECTOR_RAIL
+        amount: 1
+        price: 700
+      eeb8abe1:
+        slot: 14
+        material: ACTIVATOR_RAIL
+        amount: 1
+        price: 700
+      026739ac:
+        slot: 15
+        material: MINECART
+        amount: 1
+        price: 700
+      3f412b0f:
+        slot: 16
+        material: HOPPER_MINECART
+        amount: 1
+        price: 700
+      efbbb00b:
+        slot: 17
+        material: CHEST_MINECART
+        amount: 1
+        price: 700
+  '7':
+    items:
+      803ad7b7:
+        slot: 9
+        material: FURNACE_MINECART
+        amount: 1
+        price: 700
+      da9512ef:
+        slot: 10
+        material: TNT_MINECART
+        amount: 1
+        price: 700
+      84432e9c:
+        slot: 11
+        material: OAK_CHEST_BOAT
+        amount: 1
+        price: 700
+      3bd5d9f9:
+        slot: 12
+        material: BAMBOO_CHEST_RAFT
+        amount: 1
+        price: 700
+      088b24b6:
+        slot: 13
+        material: OAK_DOOR
+        amount: 1
+        price: 700
+      cb411ffb:
+        slot: 14
+        material: IRON_DOOR
+        amount: 1
+        price: 700
+      b567f67b:
+        slot: 15
+        material: OAK_FENCE_GATE
+        amount: 1
+        price: 700
+      c3c09161:
+        slot: 16
+        material: OAK_TRAPDOOR
+        amount: 1
+        price: 700
+      29d6db54:
+        slot: 17
+        material: IRON_TRAPDOOR
+        amount: 1
+        price: 700
+  '8':
+    items:
+      259015d2:
+        slot: 9
+        material: TNT
+        amount: 1
+        price: 700
+      a401e794:
+        slot: 10
+        material: REDSTONE_LAMP
+        amount: 1
+        price: 700
+      16a91655:
+        slot: 11
+        material: BELL
+        amount: 1
+        price: 700
+      78f85547:
+        slot: 12
+        material: BIG_DRIPLEAF
+        amount: 1
+        price: 700
+      4dd8098d:
+        slot: 13
+        material: ARMOR_STAND
+        amount: 1
+        price: 700
+      lava-bucket:
+        slot: 14
+        material: LAVA_BUCKET
+        amount: 1
+        price: 550
