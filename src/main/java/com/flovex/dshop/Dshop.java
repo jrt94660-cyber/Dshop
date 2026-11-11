@@ -354,9 +354,6 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             ItemMeta meta=purchaseItem.getItemMeta();meta.setDisplayName(color(configuredName));purchaseItem.setItemMeta(meta);
         }
         Purchase purchase=new Purchase(cat,page,id,purchaseItem,unit,1);
-        if(!purchaseHasCommand(purchase)&&availableInventorySpace(p,purchaseItem)<1){
-            msg(p,"&cYour inventory is full. Make room before buying this item.");return;
-        }
         purchases.put(p.getUniqueId(),purchase);renderPurchase(p);
     }
     private boolean purchaseHasCommand(Purchase purchase){
@@ -396,14 +393,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         // Crate keys are sold one at a time. Direct item purchases are capped to the
         // capacity actually available in the player's storage, including partial stacks.
         boolean fixedQuantity=purchaseCommand!=null&&purchaseCommand.trim().toLowerCase(Locale.ROOT).startsWith("crate givekey ");
-        int maxQuantity=(purchaseCommand==null||purchaseCommand.isBlank())
-                ?Math.min(maxStack,availableInventorySpace(p,b.item)):maxStack;
-        if(maxQuantity<1){
-            purchases.remove(p.getUniqueId());
-            msg(p,"&cYour inventory is full. Make room before buying this item.");
-            openPage(p,b.cat,b.page);
-            return;
-        }
+        // Allow purchases even with full storage. Matching partial stacks are filled first;
+        // Bukkit drops any remainder nearby when no storage space remains.
+        int maxQuantity=maxStack;
         b.amount=Math.min(b.amount,maxQuantity);
         if (maxStack > 1 && !fixedQuantity && maxQuantity > 1) {
             if (maxQuantity >= 10) {
@@ -666,15 +658,6 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
                 double total=b.unit*b.amount;
                 if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
-                if(!purchaseHasCommand(b)){
-                    int available=availableInventorySpace(p,b.item);
-                    if(available<b.amount){
-                        if(available<1){msg(p,"&cYour inventory is full. You were not charged.");return;}
-                        b.amount=available;
-                        msg(p,"&eOnly &f"+available+"&e item(s) fit in your inventory. Quantity adjusted; confirm again.");
-                        renderPurchase(p);return;
-                    }
-                }
                 YamlConfiguration category=categories.get(b.cat);
                 String command=category.getString("pages."+b.page+".items."+b.id+".command",category.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
                 if(command!=null&&!command.isBlank()){
