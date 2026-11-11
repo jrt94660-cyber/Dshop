@@ -1,0 +1,10 @@
+# Items in Dshop categories automatically sell for 50% of shop price.
+# These explicit prices override that calculation.
+prices:
+  SEA_PICKLE: 800
+  BAMBOO: 300
+  KELP: 400
+  DRIED_KELP: 500
+  DRIED_KELP_BLOCK: 700
+  SUGAR_CANE: 600
+defaults: {}
