@@ -406,7 +406,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         }
         b.amount=Math.min(b.amount,maxQuantity);
         if (maxStack > 1 && !fixedQuantity && maxQuantity > 1) {
-            if (maxStack >= 10) {
+            if (maxQuantity >= 10) {
                 inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
                 inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
             }
@@ -414,7 +414,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
             // The outer quantity buttons always match this item's actual max stack:
             // 16 for ender pearls/snowballs, 64 for ordinary stackables.
-            if (maxStack >= 16) {
+            if (maxQuantity >= 16) {
                 int stackAmount = maxStack >= 64 ? 64 : 16;
                 inv.setItem(10,tagged(Material.RED_CANDLE,"&c-"+stackAmount,List.of("&7Remove "+stackAmount+" items"),"minus"+stackAmount,b.cat,b.page,b.id));
                 inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+"+stackAmount,List.of("&7Add "+stackAmount+" items"),"plus"+stackAmount,b.cat,b.page,b.id));
