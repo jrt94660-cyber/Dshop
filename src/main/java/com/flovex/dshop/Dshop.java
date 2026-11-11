@@ -353,7 +353,33 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(configuredName!=null&&!configuredName.isBlank()){
             ItemMeta meta=purchaseItem.getItemMeta();meta.setDisplayName(color(configuredName));purchaseItem.setItemMeta(meta);
         }
-        Purchase purchase=new Purchase(cat,page,id,purchaseItem,unit,1);purchases.put(p.getUniqueId(),purchase);renderPurchase(p);
+        Purchase purchase=new Purchase(cat,page,id,purchaseItem,unit,1);
+        if(!purchaseHasCommand(purchase)&&availableInventorySpace(p,purchaseItem)<1){
+            msg(p,"&cYour inventory is full. Make room before buying this item.");return;
+        }
+        purchases.put(p.getUniqueId(),purchase);renderPurchase(p);
+    }
+    private boolean purchaseHasCommand(Purchase purchase){
+        YamlConfiguration category=categories.get(purchase.cat);
+        if(category==null)return false;
+        String command=category.getString("pages."+purchase.page+".items."+purchase.id+".command",
+                category.getString("pages."+purchase.page+".items."+purchase.id+".commands.purchase",""));
+        return command!=null&&!command.isBlank();
+    }
+    // Counts both empty storage slots and remaining capacity in matching partial stacks.
+    // This mirrors PlayerInventory.addItem without counting armor/offhand slots.
+    private int availableInventorySpace(Player player,ItemStack item){
+        int max=item.getMaxStackSize(),space=0;
+        for(ItemStack content:player.getInventory().getStorageContents()){
+            if(content==null||content.getType().isAir())space+=max;
+            else if(content.isSimilar(item))space+=Math.max(0,Math.min(max,content.getMaxStackSize())-content.getAmount());
+            if(space>=max)return max;
+        }
+        return Math.min(max,space);
+    }
+    private int maxPurchaseAmount(Player player,Purchase purchase){
+        return purchaseHasCommand(purchase)?purchase.item.getMaxStackSize()
+                :Math.min(purchase.item.getMaxStackSize(),availableInventorySpace(player,purchase.item));
     }
     private void renderPurchase(Player p){
         Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
@@ -365,10 +391,21 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         // do not show quantity controls; 16-stack items (for example, ender pearls) cap at 16.
         int maxStack = b.item.getMaxStackSize();
         YamlConfiguration itemCategory=categories.get(b.cat);
-        String purchaseCommand=itemCategory==null?"":itemCategory.getString("pages."+b.page+".items."+b.id+".command","");
-        // Crate keys are sold one at a time; quantity controls are only for stackable goods/spawners.
+        String purchaseCommand=itemCategory==null?"":itemCategory.getString("pages."+b.page+".items."+b.id+".command",
+                itemCategory==null?"":itemCategory.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
+        // Crate keys are sold one at a time. Direct item purchases are capped to the
+        // capacity actually available in the player's storage, including partial stacks.
         boolean fixedQuantity=purchaseCommand!=null&&purchaseCommand.trim().toLowerCase(Locale.ROOT).startsWith("crate givekey ");
-        if (maxStack > 1 && !fixedQuantity) {
+        int maxQuantity=(purchaseCommand==null||purchaseCommand.isBlank())
+                ?Math.min(maxStack,availableInventorySpace(p,b.item)):maxStack;
+        if(maxQuantity<1){
+            purchases.remove(p.getUniqueId());
+            msg(p,"&cYour inventory is full. Make room before buying this item.");
+            openPage(p,b.cat,b.page);
+            return;
+        }
+        b.amount=Math.min(b.amount,maxQuantity);
+        if (maxStack > 1 && !fixedQuantity && maxQuantity > 1) {
             if (maxStack >= 10) {
                 inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
                 inv.setItem(15,tagged(Material.LIME_CANDLE,"&a+10",List.of("&7Add 10 items"),"plus10",b.cat,b.page,b.id));
@@ -623,12 +660,21 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             case "previous" -> openPage(p,cat,Math.max(1,page-1));
             case "next" -> openPage(p,cat,page+1);
             case "product" -> openPurchase(p,cat,page,clicked.getItemMeta().getPersistentDataContainer().get(itemKey,PersistentDataType.STRING));
-            case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(b.item.getMaxStackSize(),b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
+            case "minus1","minus10","minus64","plus1","plus10","plus64" -> {Purchase b=purchases.get(p.getUniqueId());if(b==null)return;int n=Integer.parseInt(action.replaceAll("[^0-9]",""));b.amount=Math.max(1,Math.min(maxPurchaseAmount(p,b),b.amount+(action.startsWith("plus")?n:-n)));renderPurchase(p);}
             case "cancel" -> {purchases.remove(p.getUniqueId());openPage(p,cat,page);}
             case "confirm" -> {
                 Purchase b=purchases.get(p.getUniqueId());if(b==null)return;
                 double total=b.unit*b.amount;
                 if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
+                if(!purchaseHasCommand(b)){
+                    int available=availableInventorySpace(p,b.item);
+                    if(available<b.amount){
+                        if(available<1){msg(p,"&cYour inventory is full. You were not charged.");return;}
+                        b.amount=available;
+                        msg(p,"&eOnly &f"+available+"&e item(s) fit in your inventory. Quantity adjusted; confirm again.");
+                        renderPurchase(p);return;
+                    }
+                }
                 YamlConfiguration category=categories.get(b.cat);
                 String command=category.getString("pages."+b.page+".items."+b.id+".command",category.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
                 if(command!=null&&!command.isBlank()){
