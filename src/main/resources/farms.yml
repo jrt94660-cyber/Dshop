@@ -1,0 +1,17 @@
+category:
+  name: farms
+  display-name: "&#0bf592ꜰᴀʀᴍs"
+  description: "Farm crops and utility supplies."
+  material: SUGAR_CANE
+  slot: 23
+  default-page: 1
+  economy: VAULT
+  currency: ""
+pages:
+  '1':
+    items:
+      sea-pickle: {slot: 10, material: SEA_PICKLE, amount: 1, item-name: "&fSea Pickle", price: 150}
+      kelp: {slot: 11, material: KELP, amount: 1, item-name: "&fKelp", price: 100}
+      bamboo: {slot: 12, material: BAMBOO, amount: 1, item-name: "&fBamboo", price: 100}
+      sugar-cane: {slot: 13, material: SUGAR_CANE, amount: 1, item-name: "&fSugar Cane", price: 125}
+      water-bucket: {slot: 14, material: WATER_BUCKET, amount: 1, item-name: "&bWater Bucket", price: 250}
