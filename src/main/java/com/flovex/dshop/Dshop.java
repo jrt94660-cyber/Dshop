@@ -52,7 +52,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         vault=null;
         if(Bukkit.getPluginManager().getPlugin("Vault")==null)return;
         try{
-            Class<?> economyApi=Class.forName("net.milkbowl.vault.economy.Economy",false,getClassLoader());
+            Class<?> economyApi=Class.forName("net.milkbowl.vault.economy.Economy",false,getClass().getClassLoader());
             RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(economyApi);
             if(registration!=null)vault=registration.getProvider();
         }catch(Exception|LinkageError ex){
