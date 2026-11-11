@@ -393,10 +393,10 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         // Crate keys are sold one at a time. Direct item purchases are capped to the
         // capacity actually available in the player's storage, including partial stacks.
         boolean fixedQuantity=purchaseCommand!=null&&purchaseCommand.trim().toLowerCase(Locale.ROOT).startsWith("crate givekey ");
-        // Allow purchases even with full storage. Matching partial stacks are filled first;
-        // Bukkit drops any remainder nearby when no storage space remains.
-        int maxQuantity=maxStack;
-        b.amount=Math.min(b.amount,maxQuantity);
+        // Limit direct-item quantity to what can fit, including matching partial stacks.
+        int maxQuantity=(purchaseCommand==null||purchaseCommand.isBlank())
+                ?Math.min(maxStack,availableInventorySpace(p,b.item)):maxStack;
+        b.amount=Math.max(1,Math.min(b.amount,Math.max(1,maxQuantity)));
         if (maxStack > 1 && !fixedQuantity && maxQuantity > 1) {
             if (maxQuantity >= 10) {
                 inv.setItem(11,tagged(Material.RED_CANDLE,"&c-10",List.of("&7Remove 10 items"),"minus10",b.cat,b.page,b.id));
@@ -660,6 +660,14 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 if(b.amount>b.item.getMaxStackSize()){msg(p,"&cMaximum quantity for this item is "+b.item.getMaxStackSize()+".");return;}
                 YamlConfiguration category=categories.get(b.cat);
                 String command=category.getString("pages."+b.page+".items."+b.id+".command",category.getString("pages."+b.page+".items."+b.id+".commands.purchase",""));
+                if(command==null||command.isBlank()){
+                    int available=availableInventorySpace(p,b.item);
+                    if(available<b.amount){
+                        p.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection()
+                                .deserialize(color("&cInventory is full! Make room before purchasing.")));
+                        return;
+                    }
+                }
                 if(command!=null&&!command.isBlank()){
                     // Check the balance first, then execute the reward command, and only charge
                     // after Bukkit confirms that the command was handled.
@@ -673,7 +681,15 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                     if(!withdraw(p,cat,total)){msg(p,"&cYou don't have enough currency or the economy provider is unavailable.");return;}
                     int remaining=b.amount;
                     while(remaining>0){int give=Math.min(remaining,b.item.getMaxStackSize());ItemStack part=b.item.clone();part.setAmount(give);
-                        Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);overflow.values().forEach(it->p.getWorld().dropItemNaturally(p.getLocation(),it));remaining-=give;}
+                        Map<Integer,ItemStack> overflow=p.getInventory().addItem(part);
+                        if(!overflow.isEmpty()){
+                            // Defensive rollback: this should not happen after the capacity check.
+                            getLogger().warning("Inventory capacity changed during purchase for "+p.getName()+".");
+                            p.sendActionBar(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection()
+                                    .deserialize(color("&cInventory is full! Make room before purchasing.")));
+                            return;
+                        }
+                        remaining-=give;}
                 }
                 int purchasedAmount=b.amount;
                 // Preserve the selected quantity for the next purchase of this item.
