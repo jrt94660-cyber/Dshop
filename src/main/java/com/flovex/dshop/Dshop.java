@@ -249,7 +249,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(page==1)inv.setItem(18,tagged(Material.RED_STAINED_GLASS_PANE,"&cBack to Categories",
                 List.of("&7Return to the shop categories"),"back_categories",cat,page,null));
         if(pageExists(cat,page-1)){
-            inv.setItem(19,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
+            inv.setItem(18,tagged(Material.ARROW,"&cPrevious Page",List.of("&7Go to page "+(page-1)),"previous",cat,page,null));
         }
         if(pageExists(cat,page+1)){
             inv.setItem(26,tagged(Material.ARROW,"&aNext Page",List.of("&7Go to page "+(page+1)),"next",cat,page,null));
@@ -375,9 +375,12 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             }
             inv.setItem(12,tagged(Material.RED_CANDLE,"&c-1",List.of("&7Remove 1 item"),"minus1",b.cat,b.page,b.id));
             inv.setItem(14,tagged(Material.LIME_CANDLE,"&a+1",List.of("&7Add 1 item"),"plus1",b.cat,b.page,b.id));
-            if (maxStack >= 64) {
-                inv.setItem(10,tagged(Material.RED_CANDLE,"&c-64",List.of("&7Remove 64 items"),"minus64",b.cat,b.page,b.id));
-                inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+64",List.of("&7Add 64 items"),"plus64",b.cat,b.page,b.id));
+            // The outer quantity buttons always match this item's actual max stack:
+            // 16 for ender pearls/snowballs, 64 for ordinary stackables.
+            if (maxStack >= 16) {
+                int stackAmount = maxStack >= 64 ? 64 : 16;
+                inv.setItem(10,tagged(Material.RED_CANDLE,"&c-"+stackAmount,List.of("&7Remove "+stackAmount+" items"),"minus"+stackAmount,b.cat,b.page,b.id));
+                inv.setItem(16,tagged(Material.LIME_CANDLE,"&a+"+stackAmount,List.of("&7Add "+stackAmount+" items"),"plus"+stackAmount,b.cat,b.page,b.id));
             }
         }
         // Back and confirm sit directly beneath the -1 and +1 controls.
