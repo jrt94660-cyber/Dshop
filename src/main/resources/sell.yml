@@ -1,6 +1,13 @@
 gui:
   title: "&8Sell Items"
   sell-name: "&a&lSELL ITEMS"
+pricing:
+  shop-price-percent: 50.0
+shulkers:
+  enabled: true
+  # Keep shulker boxes after selling their contents by default.
+  sell-box: false
 messages:
   nothing: "&cYou have no sellable items."
-  sold: "&aSold &f{amount} &aitems for &f$ {total}."
+  economy-error: "&cSell failed: Vault economy is unavailable."
+  sold: "&aSold &f{amount} &aitems for &f{total}."
