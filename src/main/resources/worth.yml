@@ -1,5 +1,5 @@
-# Items in Dshop categories automatically sell for 50% of shop price.
-# These explicit prices override that calculation.
+# Items in Dshop automatically sell for 50% of their configured shop purchase price.
+# Explicit material prices override the automatic calculation.
 prices:
   SEA_PICKLE: 800
   BAMBOO: 300
@@ -7,4 +7,49 @@ prices:
   DRIED_KELP: 500
   DRIED_KELP_BLOCK: 700
   SUGAR_CANE: 600
+# Added value per enchantment level.
+enchantments:
+  sharpness: 2
+  efficiency: 2
+  unbreaking: 2
+  fortune: 5
+  looting: 5
+  mending: 10
+  protection: 2
+  fire_protection: 1
+  blast_protection: 1
+  projectile_protection: 1
+  feather_falling: 1
+  respiration: 1
+  aqua_affinity: 1
+  thorns: 2
+  depth_strider: 1
+  frost_walker: 1
+  soul_speed: 1
+  swift_sneak: 1
+  power: 2
+  punch: 2
+  flame: 2
+  infinity: 10
+  multishot: 2
+  piercing: 2
+  quick_charge: 2
+  loyalty: 2
+  riptide: 2
+  channeling: 5
+  impaling: 2
+# Added value by base potion type.
+potions:
+  healing: 5
+  strong_healing: 10
+  regeneration: 5
+  strong_regeneration: 10
+  strength: 5
+  strong_strength: 10
+  swiftness: 5
+  strong_swiftness: 10
+  fire_resistance: 5
+  water_breathing: 5
+  invisibility: 5
+  night_vision: 5
 defaults: {}
