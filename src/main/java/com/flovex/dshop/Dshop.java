@@ -49,7 +49,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         loadCategories();
         if(getCommand("shop")!=null){getCommand("shop").setExecutor(this);getCommand("shop").setTabCompleter(this);}
         if(getCommand("shardshop")!=null)getCommand("shardshop").setExecutor(this);
-        Bukkit.getPluginManager().registerEvents(this,this); setupVault();
+        Bukkit.getPluginManager().registerEvents(this,this); setupVault(); new SellManager(this).register();
         getLogger().info("Dshop enabled.");
     }
     private void setupVault(){
