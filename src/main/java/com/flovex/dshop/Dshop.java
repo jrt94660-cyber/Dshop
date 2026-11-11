@@ -14,6 +14,8 @@ import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -42,6 +44,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         if(!pricesFile.exists()) try { getDataFolder().mkdirs(); pricesFile.createNewFile(); } catch(Exception e){getLogger().severe(e.getMessage());}
         prices=YamlConfiguration.loadConfiguration(pricesFile);
         installDefaultCategories();
+        installBundledCategory("redstone.yml");
+        installBundledCategory("farms.yml");
         loadCategories();
         if(getCommand("shop")!=null){getCommand("shop").setExecutor(this);getCommand("shop").setTabCompleter(this);}
         if(getCommand("shardshop")!=null)getCommand("shardshop").setExecutor(this);
@@ -103,6 +107,21 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                     if(name.equalsIgnoreCase("shards")&&!existing.getString("category.display-name","").equals("&#E43A96sʜᴀʀᴅs")){
                         existing.set("category.display-name","&#E43A96sʜᴀʀᴅs");changed=true;
                     }
+                    if(name.equalsIgnoreCase("gear")){
+                        String arrowPath="pages.1.items.arrow";
+                        if(existing.contains(arrowPath)){
+                            if(!existing.getString(arrowPath+".material","").equalsIgnoreCase("TIPPED_ARROW")){existing.set(arrowPath+".material","TIPPED_ARROW");changed=true;}
+                            if(!existing.getString(arrowPath+".potion-type","").equalsIgnoreCase("STRONG_HARMING")){existing.set(arrowPath+".potion-type","STRONG_HARMING");changed=true;}
+                            existing.set(arrowPath+".amount",1);
+                        }
+                        ConfigurationSection defaultGearPage=source.getConfigurationSection("pages.2.items");
+                        if(defaultGearPage!=null)for(String itemId:defaultGearPage.getKeys(false)){
+                            String itemPath="pages.2.items."+itemId;
+                            if(existing.contains(itemPath))continue;
+                            ConfigurationSection itemDefaults=defaultGearPage.getConfigurationSection(itemId);
+                            if(itemDefaults!=null){for(String field:itemDefaults.getKeys(false))existing.set(itemPath+"."+field,itemDefaults.get(field));changed=true;}
+                        }
+                    }
                     ConfigurationSection existingPages=existing.getConfigurationSection("pages");
                     if(existingPages!=null)for(String page:existingPages.getKeys(false)){
                         ConfigurationSection existingItems=existing.getConfigurationSection("pages."+page+".items");
@@ -161,6 +180,16 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 getLogger().info("Installed built-in shop category: "+name);
             }
         }catch(Exception ex){getLogger().severe("Could not install built-in shop categories: "+ex.getMessage());}
+    }
+    private void installBundledCategory(String resourceName){
+        File target=new File(getDataFolder(),"categories/"+resourceName);
+        if(target.exists())return;
+        try(var input=getResource(resourceName)){
+            if(input==null){getLogger().warning("Bundled category resource not found: "+resourceName);return;}
+            File parent=target.getParentFile();if(!parent.exists()&&!parent.mkdirs())throw new java.io.IOException("Could not create categories directory");
+            java.nio.file.Files.copy(input,target.toPath());
+            getLogger().info("Installed bundled shop category: "+resourceName);
+        }catch(Exception ex){getLogger().warning("Could not install "+resourceName+": "+ex.getMessage());}
     }
     private void loadCategories(){
         categories.clear(); File dir=new File(getDataFolder(),"categories"); if(!dir.exists())dir.mkdirs();
@@ -302,6 +331,11 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             Enchantment enchantment=Enchantment.getByKey(NamespacedKey.minecraft(name.toLowerCase(Locale.ROOT)));
             if(enchantment!=null)meta.addEnchant(enchantment,enchants.getInt(name),true);
         }
+        if(meta instanceof PotionMeta potionMeta){
+            String potionType=data.getString(path+".potion-type");
+            if(potionType!=null&&!potionType.isBlank())try{potionMeta.setBasePotionType(PotionType.valueOf(potionType.toUpperCase(Locale.ROOT)));}
+            catch(IllegalArgumentException ex){getLogger().warning("Invalid potion type '"+potionType+"' at "+path);}
+        }
         stack.setItemMeta(meta);
         return stack;
     }
@@ -313,6 +347,9 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         data.set(path+".item-name",meta!=null&&meta.hasDisplayName()?meta.getDisplayName():null);
         data.set(path+".lore",meta!=null&&meta.hasLore()?meta.getLore():null);
         data.set(path+".enchantments",null);
+        data.set(path+".potion-type",null);
+        if(meta instanceof PotionMeta potionMeta&&potionMeta.getBasePotionType()!=null)
+            data.set(path+".potion-type",potionMeta.getBasePotionType().name());
         if(meta!=null&&!meta.getEnchants().isEmpty())for(var entry:meta.getEnchants().entrySet())
             data.set(path+".enchantments."+entry.getKey().getKey().getKey(),entry.getValue());
     }
