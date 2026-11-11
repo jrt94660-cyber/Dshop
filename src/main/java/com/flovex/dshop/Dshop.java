@@ -1,6 +1,5 @@
 package com.flovex.dshop;
 
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -32,7 +31,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     private final Map<UUID,Purchase> purchases = new ConcurrentHashMap<>();
     private final Map<UUID,IconSession> iconSessions = new ConcurrentHashMap<>();
     private NamespacedKey actionKey, categoryKey, pageKey, itemKey;
-    private Economy vault;
+    private Object vault;
     private File pricesFile;
     private YamlConfiguration prices;
 
@@ -49,7 +48,43 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         Bukkit.getPluginManager().registerEvents(this,this); setupVault();
         getLogger().info("Dshop enabled.");
     }
-    private void setupVault(){ if(Bukkit.getPluginManager().getPlugin("Vault")!=null){RegisteredServiceProvider<Economy> rsp=Bukkit.getServicesManager().getRegistration(Economy.class);if(rsp!=null)vault=rsp.getProvider();}}
+    private void setupVault(){
+        vault=null;
+        if(Bukkit.getPluginManager().getPlugin("Vault")==null)return;
+        try{
+            Class<?> economyApi=Class.forName("net.milkbowl.vault.economy.Economy",false,getClassLoader());
+            RegisteredServiceProvider<?> registration=Bukkit.getServicesManager().getRegistration(economyApi);
+            if(registration!=null)vault=registration.getProvider();
+        }catch(Exception|LinkageError ex){
+            getLogger().warning("Vault integration is unavailable: "+ex.getClass().getSimpleName()+" - "+ex.getMessage());
+            vault=null;
+        }
+    }
+    private boolean vaultHas(Player player,double amount) throws Exception{
+        if(vault==null)return false;
+        for(var method:vault.getClass().getMethods()){
+            if(!method.getName().equals("has")||method.getParameterCount()!=2)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(types[0].isAssignableFrom(Player.class)&&(types[1]==double.class||types[1]==Double.class))
+                return Boolean.TRUE.equals(method.invoke(vault,player,amount));
+        }
+        getLogger().warning("Vault Economy provider has no compatible has(Player, double) method.");
+        return false;
+    }
+    private boolean vaultWithdraw(Player player,double amount) throws Exception{
+        if(vault==null||!vaultHas(player,amount))return false;
+        for(var method:vault.getClass().getMethods()){
+            if(!method.getName().equals("withdrawPlayer")||method.getParameterCount()!=2)continue;
+            Class<?>[] types=method.getParameterTypes();
+            if(!types[0].isAssignableFrom(Player.class)||(types[1]!=double.class&&types[1]!=Double.class))continue;
+            Object response=method.invoke(vault,player,amount);
+            if(response==null)return false;
+            Object success=response.getClass().getMethod("transactionSuccess").invoke(response);
+            return Boolean.TRUE.equals(success);
+        }
+        getLogger().warning("Vault Economy provider has no compatible withdrawPlayer(Player, double) method.");
+        return false;
+    }
     private void installDefaultCategories(){
         File dir=new File(getDataFolder(),"categories");
         if(!dir.exists()&&!dir.mkdirs())getLogger().warning("Could not create categories directory.");
@@ -159,6 +194,17 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         private Inventory inventory;
         @Override public Inventory getInventory(){return inventory;}
     }
+    private List<String> categoryLore(String description){
+        return List.of(
+                "&8&m━━━━━━━━━━━━━━━━━━",
+                "&7ᴅᴇꜱᴄʀɪᴘᴛɪᴏɴ",
+                "&f"+description,
+                "",
+                "&8&m━━━━━━━━━━━━━━━━━━",
+                "&7ꜱᴛᴀᴛᴜꜱ: &aᴀᴠᴀɪʟᴀʙʟᴇ",
+                "&e▸ &fClick to browse"
+        );
+    }
     private void openCategories(Player p){
         int rows=3;
         Inventory inv=createShopInventory(rows*9,color(getConfig().getString("gui.categories-title","&8Shop | Categories")));
@@ -167,7 +213,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
             String display=c.getString("category.display-name","&b"+en.getKey().toUpperCase(Locale.ROOT));
             String desc=c.getString("category.description","Browse this category.");
             Material mat=Material.matchMaterial(c.getString("category.material","CHEST"));if(mat==null)mat=Material.CHEST;
-            inv.setItem(slot,tagged(mat,display,List.of("&7Description","", "&bInformation:","&bClick here to view","&f"+desc,"","&e▸ &lCLICK &eto Open"),"category",en.getKey(),c.getInt("category.default-page",1),null));
+            inv.setItem(slot,tagged(mat,display,categoryLore(desc),"category",en.getKey(),c.getInt("category.default-page",1),null));
         }
         p.openInventory(inv);
     }
@@ -505,6 +551,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     @EventHandler public void onClick(InventoryClickEvent e){
         if(!(e.getWhoClicked() instanceof Player p))return;
         boolean shopView=e.getView().getTopInventory().getHolder() instanceof ShopHolder;
+        // Never inspect or cancel clicks in inventories owned by other plugins.
+        if(!shopView)return;
         if(shopView){
             // Block shift-clicks, number-key swaps, Q-drops, double-click collection,
             // and all other inventory actions while any Dshop menu is open.
@@ -610,7 +658,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String provider=category.getString("category.economy","VAULT").replaceAll("[^A-Za-z]","").toUpperCase(Locale.ROOT);
         String currency=category.getString("category.currency","").trim();
         try{
-            if(provider.equals("VAULT"))return vault!=null&&vault.has(p,amount);
+            if(provider.equals("VAULT"))return vaultHas(p,amount);
             if(provider.equals("EXCELLECONOMY")||provider.equals("EXCELLENTECONOMY")||provider.equals("COINSENGINE")){
                 if(Bukkit.getPluginManager().getPlugin("ExcellentEconomy")!=null){
                     Class<?> api=Class.forName("su.nightexpress.excellenteconomy.api.ExcellentEconomyAPI");
@@ -635,7 +683,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                     }
                 }
             }
-        }catch(Exception ex){getLogger().warning("Could not check funds before command reward: "+ex.getMessage());}
+        }catch(Exception|LinkageError ex){getLogger().warning("Could not check funds before command reward: "+ex.getClass().getSimpleName()+" - "+ex.getMessage());}
         return false;
     }
     private boolean withdraw(Player p,String cat,double amount){
@@ -644,8 +692,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
         String provider=category.getString("category.economy","VAULT").replaceAll("[^A-Za-z]","").toUpperCase(Locale.ROOT);
         String currency=category.getString("category.currency","").trim();
         try {
-            if(provider.equals("VAULT"))
-                return vault!=null&&vault.has(p,amount)&&vault.withdrawPlayer(p,amount).transactionSuccess();
+            if(provider.equals("VAULT"))return vaultWithdraw(p,amount);
 
             if(provider.equals("EXCELLECONOMY")||provider.equals("EXCELLENTECONOMY")
                     ||provider.equals("COINSENGINE")){
@@ -662,7 +709,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                 return false;
             }
             getLogger().warning("Unknown economy provider '"+provider+"' in category '"+cat+"'.");
-        } catch(Exception ex) {
+        } catch(Exception|LinkageError ex) {
             getLogger().warning("Economy withdrawal failed for "+provider+": "+ex.getClass().getSimpleName()+" - "+ex.getMessage());
         }
         return false;
@@ -799,8 +846,7 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
     }
     private double parseAmount(String raw){try{String s=raw.toLowerCase(Locale.ROOT).replace(",","").trim();double mult=1;for(String suffix:List.of("qq","k","m","b","t","q"))if(s.endsWith(suffix)){mult=switch(suffix){case "k"->1e3;case "m"->1e6;case "b"->1e9;case "t"->1e12;case "q"->1e15;default->1e18;};s=s.substring(0,s.length()-suffix.length());break;}return Double.parseDouble(s)*mult;}catch(Exception e){return -1;}}
     @EventHandler public void onInventoryDrag(InventoryDragEvent e){
-        if(e.getView().getTopInventory().getHolder() instanceof ShopHolder
-                ||sessions.containsKey(e.getWhoClicked().getUniqueId()))e.setCancelled(true);
+        if(e.getView().getTopInventory().getHolder() instanceof ShopHolder)e.setCancelled(true);
     }
     @EventHandler public void onPlayerDrop(org.bukkit.event.player.PlayerDropItemEvent e){
         if(e.getPlayer().getOpenInventory().getTopInventory().getHolder() instanceof ShopHolder)e.setCancelled(true);
