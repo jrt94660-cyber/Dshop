@@ -114,7 +114,8 @@ public final class Dshop extends JavaPlugin implements Listener, CommandExecutor
                             if(!existing.getString(arrowPath+".potion-type","").equalsIgnoreCase("STRONG_HARMING")){existing.set(arrowPath+".potion-type","STRONG_HARMING");changed=true;}
                             existing.set(arrowPath+".amount",1);
                         }
-                        ConfigurationSection defaultGearPage=source.getConfigurationSection("pages.2.items");
+                        ConfigurationSection defaultGearCategory=root.getConfigurationSection(name);
+                        ConfigurationSection defaultGearPage=defaultGearCategory==null?null:defaultGearCategory.getConfigurationSection("pages.2.items");
                         if(defaultGearPage!=null)for(String itemId:defaultGearPage.getKeys(false)){
                             String itemPath="pages.2.items."+itemId;
                             if(existing.contains(itemPath))continue;
