@@ -1,0 +1,6 @@
+gui:
+  title: "&8Sell Items"
+  sell-name: "&a&lSELL ITEMS"
+messages:
+  nothing: "&cYou have no sellable items."
+  sold: "&aSold &f{amount} &aitems for &f$ {total}."
